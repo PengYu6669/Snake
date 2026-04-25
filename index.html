@@ -392,6 +392,110 @@
             pointer-events: none;
         }
 
+        /* ===== 交互教程 Overlay ===== */
+        #tutorialOverlay {
+            background: rgba(0,0,0,0.92);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+        }
+        .tutorial-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            max-width: 320px;
+            padding: 0 16px;
+        }
+        .tutorial-wrap .tut-brand {
+            color: #ff5a7a;
+            font-size: 10px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            opacity: 0.6;
+            margin-bottom: 2px;
+        }
+        #tutorialCanvas {
+            width: 100%;
+            max-width: 280px;
+            aspect-ratio: 1 / 1;
+            border-radius: 8px;
+            background: #0d0d0d;
+            display: block;
+            image-rendering: pixelated;
+            box-shadow: 0 0 30px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.4);
+        }
+        .tutorial-hint {
+            min-height: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.35s;
+            line-height: 1.5;
+            padding: 4px 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .tutorial-hint.show { opacity: 1; }
+        .tutorial-hint .highlight { color: #4ecca3; }
+        .tutorial-hint .highlight-pink { color: #ff5a7a; }
+        .tutorial-hint .finger {
+            display: inline-block;
+            animation: tutTap 0.9s ease-in-out infinite;
+        }
+        @keyframes tutTap { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25)} }
+        .tutorial-progress {
+            display: flex;
+            gap: 6px;
+            margin: 2px 0 8px;
+        }
+        .tutorial-progress .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            transition: all 0.3s;
+        }
+        .tutorial-progress .dot.active { background: #4ecca3; box-shadow: 0 0 8px rgba(78,204,163,0.5); }
+        .tutorial-progress .dot.done { background: rgba(78,204,163,0.4); }
+        .tutorial-btns {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 280px;
+        }
+        .tutorial-btns button {
+            flex: 1;
+            height: 44px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: transform 0.12s;
+            font-family: 'Courier New', Courier, monospace;
+            touch-action: manipulation;
+        }
+        .tutorial-btns button:active { transform: scale(0.95); }
+        .tutorial-btns .tut-skip {
+            background: rgba(255,255,255,0.08);
+            color: rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .tutorial-btns .tut-start {
+            background: linear-gradient(135deg, #e94560, #ff6b35);
+            color: #fff;
+            display: none;
+        }
+        @media (max-width: 400px) {
+            .tutorial-wrap { max-width: 280px; }
+            #tutorialCanvas { max-width: 240px; }
+            .tutorial-hint { font-size: 14px; }
+        }
+
         @media (max-height: 700px) {
             .pocket-shell { padding: 16px 16px 24px; }
             .dpad { transform: scale(0.85); }
@@ -522,6 +626,20 @@
     </div>
 </div>
 
+<!-- 交互教程 -->
+<div class="overlay show" id="tutorialOverlay">
+    <div class="tutorial-wrap">
+        <div class="tut-brand">▶ SHAPE-SNAKE TUTORIAL</div>
+        <canvas id="tutorialCanvas"></canvas>
+        <div class="tutorial-hint" id="tutorialHint"></div>
+        <div class="tutorial-progress" id="tutorialProgress"></div>
+        <div class="tutorial-btns">
+            <button class="tut-skip" id="tutorialSkip">跳过教程</button>
+            <button class="tut-start" id="tutorialStart">开始挑战</button>
+        </div>
+    </div>
+</div>
+
 <!-- 隐藏的 spitBtn（供 JS 逻辑引用） -->
 <button id="spitBtn" style="display:none"></button>
 
@@ -545,26 +663,36 @@ const LEVELS = [
         stageClear: 'auto',
     },
     {
-        name: '炼狱',
+        name: '进阶',
         grid: 14,
         target: [
-            [3,3],[3,4],[3,5],[3,6],[3,7],[3,8],[3,9],[3,10],
-            [4,3],[4,4],[4,5],[4,6],[4,7],[4,8],[4,9],[4,10],
-            [5,3],[5,4],[5,5],[5,6],[5,7],[5,8],[5,9],[5,10],
-            [6,3],[6,4],[6,5],[6,6],[6,7],[6,8],[6,9],[6,10],
-            [7,3],[7,4],[7,5],[7,6],[7,7],[7,8],[7,9],[7,10],
-            [8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],
-            [9,3],[9,4],[9,5],[9,6],[9,7],[9,8],[9,9],[9,10],
+            // 粗十字形 33格 — 横臂 rows 6-8, cols 4-10; 纵臂 rows 4-10, cols 6-8
+            // 横臂 21格
+            [6,4],[6,5],[6,6],[6,7],[6,8],[6,9],[6,10],
+            [7,4],[7,5],[7,6],[7,7],[7,8],[7,9],[7,10],
+            [8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],
+            // 纵臂上下延伸 12格
+            [4,6],[4,7],[4,8],
+            [5,6],[5,7],[5,8],
+            [9,6],[9,7],[9,8],
+            [10,6],[10,7],[10,8],
         ],
-        snake: [{x:0,y:6},{x:1,y:6},{x:2,y:6},{x:3,y:6},{x:4,y:6}],
+        snake: [{x:0,y:9},{x:1,y:9},{x:2,y:9},{x:3,y:9},{x:4,y:9}],
         dir: {x:1, y:0},
-        maxSteps: 300,
-        timeLimit: 60,
+        maxSteps: 400,
+        timeLimit: 120,
         resources: [
-            [0,0],[0,6],[0,13],[1,3],[1,8],[1,13],
-            [3,1],[4,2],[7,0],[9,1],
-            [3,12],[5,12],[7,11],[9,12],
-            [10,0],[10,7],[10,13],[12,3],[12,10],[13,0],[13,6],[13,13]
+            // 28个资源块，沿边框分布，避开十字形目标区域
+            [0,0],[0,2],[0,5],[0,8],[0,11],[0,13],
+            [1,0],[1,13],
+            [2,0],[2,13],
+            [3,0],[3,13],
+            [6,0],[6,13],
+            [7,0],[7,13],
+            [8,0],[8,13],
+            [11,0],[11,13],
+            [12,0],[12,13],
+            [13,0],[13,2],[13,5],[13,8],[13,11],[13,13]
         ],
     },
 ];
@@ -1681,6 +1809,316 @@ canvas.addEventListener('touchend', e => {
 
 document.addEventListener('contextmenu', e => { e.preventDefault(); });
 canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
+
+// ========== 交互式教程 ==========
+(function() {
+    const tCanvas = document.getElementById('tutorialCanvas');
+    const tCtx = tCanvas.getContext('2d');
+    const tHint = document.getElementById('tutorialHint');
+    const tProgress = document.getElementById('tutorialProgress');
+    const tOverlay = document.getElementById('tutorialOverlay');
+    const tSkip = document.getElementById('tutorialSkip');
+    const tStart = document.getElementById('tutorialStart');
+
+    // 十字目标格 (2,1)上 (1,2)左 (2,2)中 (3,2)右 (2,3)下
+    const CROSS = [{x:2,y:1},{x:1,y:2},{x:2,y:2},{x:3,y:2},{x:2,y:3}];
+    const CROSS_KEYS = new Set(CROSS.map(p => `${p.x},${p.y}`));
+    const TUT_W = 5;
+
+    // 硬编码剧本，每帧直接写死 snake 数组，蛇尾吐块
+    const SCRIPT = [
+        { frame: 0,   snake: [{x:0,y:2},{x:0,y:2},{x:0,y:2}], hint: null },
+        { frame: 20,  snake: [{x:1,y:2},{x:0,y:2},{x:0,y:2}], hint: null },
+        { frame: 40,  snake: [{x:2,y:2},{x:1,y:2},{x:0,y:2}], hint: null },
+        { frame: 60,  snake: [{x:3,y:2},{x:2,y:2},{x:1,y:2}], hint: '👀 蛇身向右前进' },
+        { frame: 80,  snake: [{x:3,y:2},{x:2,y:2},{x:1,y:2}], hint: null },
+        { frame: 100, snake: [{x:3,y:1},{x:3,y:2},{x:2,y:2}], hint: null },
+        { frame: 120, snake: [{x:2,y:1},{x:3,y:1},{x:3,y:2}], hint: null },
+        { frame: 140, snake: [{x:2,y:2},{x:2,y:1},{x:3,y:1}], hint: null },
+        // 蛇尾在 1# (2,1) → 等待吐块
+        { frame: 160, snake: [{x:2,y:3},{x:2,y:2},{x:2,y:1}], hint: '👆 双击屏幕吐方块', wait: true },
+        { frame: 180, snake: [{x:1,y:3},{x:2,y:3},{x:2,y:2}], hint: null },
+        // 蛇尾在 3# (2,3) → 等待吐块
+        { frame: 200, snake: [{x:1,y:2},{x:1,y:3},{x:2,y:3}], hint: '👆 双击屏幕吐方块', wait: true },
+        // 蛇身进入 2# (2,2)，蛇头到第二行最后一个 #
+        { frame: 220, snake: [{x:3,y:2},{x:2,y:2},{x:1,y:2}], hint: '💡 蛇身也是方块！', fill: ['2,2'] },
+        { frame: 260, snake: null, hint: null, complete: true },
+    ];
+
+    let TW, TCS;
+    let snake = [];
+    let frameCount = -1;
+    let waiting = false;
+    let filled = new Set();      // 已填充的十字目标格
+    let spitMap = new Map();     // 吐块位置 key→true
+    let scriptIdx = 0;
+    let completed = false;
+    let tutAnimId = null;
+    let particles = [];
+    let celebFrame = 0;
+
+    function resize() {
+        const parent = tCanvas.parentElement;
+        const maxW = Math.min(parent.clientWidth - 32, 280);
+        TW = maxW;
+        tCanvas.width = TW;
+        tCanvas.height = TW;
+        TCS = TW / TUT_W;
+    }
+
+    function showHint(text) {
+        tHint.innerHTML = text || '';
+        tHint.className = 'tutorial-hint' + (text ? ' show' : '');
+    }
+
+    function addParticles(x, y, count, color) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * 2 * Math.PI;
+            const speed = 0.5 + Math.random() * 3;
+            particles.push({
+                x: (x + 0.5) * TCS, y: (y + 0.5) * TCS,
+                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 2,
+                life: 0.8 + Math.random() * 0.4,
+                color, size: 1.5 + Math.random() * 2.5,
+            });
+        }
+    }
+
+    function applyEntry(entry) {
+        if (entry.snake) {
+            snake = entry.snake.map(s => ({...s}));
+        }
+        // 显式填充（吐块或帧剧本标记）
+        if (entry.fill) {
+            for (const k of entry.fill) filled.add(k);
+        }
+        if (entry.wait) waiting = true;
+        if (entry.complete) {
+            completed = true;
+            tStart.style.display = 'block';
+            tSkip.textContent = '再学一次';
+            showHint('🎉 <span class="highlight">通关！</span>蛇身+吐块=填满目标');
+        } else {
+            showHint(entry.hint);
+        }
+        updateDots();
+    }
+
+    function updateDots() {
+        let html = '';
+        for (const p of CROSS) {
+            const k = `${p.x},${p.y}`;
+            let cls = 'dot';
+            if (filled.has(k)) cls += ' done';
+            if (waiting && snake.length > 0 && `${snake[snake.length-1].x},${snake[snake.length-1].y}` === k) {
+                cls += ' active';
+            }
+            html += `<div class="${cls}"></div>`;
+        }
+        tProgress.innerHTML = html;
+    }
+
+    // 用户点击 → 在蛇尾位置吐方块
+    function doSpit() {
+        if (!waiting || snake.length === 0) return;
+        const tail = snake[snake.length - 1];
+        const key = `${tail.x},${tail.y}`;
+        spitMap.set(key, true);
+        filled.add(key);
+        addParticles(tail.x, tail.y, 14, '#4ecca3');
+        snake.pop();
+        waiting = false;
+        showHint(null);
+        updateDots();
+        scriptIdx++;
+    }
+
+    function tick() {
+        if (completed || waiting) return;
+        frameCount++;
+        const entry = SCRIPT[scriptIdx];
+        if (!entry) return;
+        if (frameCount >= entry.frame) {
+            applyEntry(entry);
+            if (!entry.wait && !entry.complete) scriptIdx++;
+        }
+    }
+
+    function draw() {
+        celebFrame++;
+        tCtx.fillStyle = '#0d0d0d';
+        tCtx.fillRect(0, 0, TW, TW);
+
+        // 网格
+        for (let r = 0; r < TUT_W; r++)
+            for (let c = 0; c < TUT_W; c++) {
+                const b = (r + c) % 2 === 0 ? 24 : 20;
+                tCtx.fillStyle = `rgb(${b},${b},${b})`;
+                tCtx.fillRect(c * TCS, r * TCS, TCS, TCS);
+            }
+
+        // 十字目标（闪烁虚线框 + 浅底色）
+        const pulse = Math.sin(celebFrame * 0.06) * 0.15 + 0.5;
+        for (const t of CROSS) {
+            tCtx.fillStyle = `rgba(78,204,163,${0.04 + pulse * 0.06})`;
+            tCtx.fillRect(t.x * TCS, t.y * TCS, TCS, TCS);
+            tCtx.strokeStyle = `rgba(78,204,163,${0.15 + pulse * 0.15})`;
+            tCtx.lineWidth = 1.5;
+            tCtx.setLineDash([3, 4]);
+            tCtx.strokeRect(t.x * TCS + 1.5, t.y * TCS + 1.5, TCS - 3, TCS - 3);
+            tCtx.setLineDash([]);
+        }
+
+        // 已填充的十字格 → 绿色背景 + ✓
+        for (const t of CROSS) {
+            if (filled.has(`${t.x},${t.y}`)) {
+                tCtx.fillStyle = 'rgba(78,204,163,0.55)';
+                tCtx.fillRect(t.x * TCS + 2, t.y * TCS + 2, TCS - 4, TCS - 4);
+                tCtx.fillStyle = '#0d0d0d';
+                tCtx.font = `bold ${TCS * 0.45}px Arial`;
+                tCtx.textAlign = 'center';
+                tCtx.textBaseline = 'middle';
+                tCtx.fillText('✓', (t.x + 0.5) * TCS, (t.y + 0.5) * TCS + 0.5);
+            }
+        }
+
+        // 吐块（发光绿色方块）
+        for (const key of spitMap.keys()) {
+            const [sx, sy] = key.split(',').map(Number);
+            tCtx.fillStyle = '#4ecca3';
+            tCtx.shadowColor = '#4ecca3';
+            tCtx.shadowBlur = 10;
+            tCtx.fillRect(sx * TCS + 3, sy * TCS + 3, TCS - 6, TCS - 6);
+            tCtx.shadowBlur = 0;
+            tCtx.fillStyle = 'rgba(255,255,255,0.12)';
+            tCtx.fillRect(sx * TCS + 5, sy * TCS + 5, (TCS - 10) * 0.6, 3);
+        }
+
+        // 蛇身
+        for (let i = snake.length - 1; i >= 0; i--) {
+            const s = snake[i];
+            const pct = snake.length > 1 ? i / (snake.length - 1) : 0;
+            const light = 60 - pct * 25;
+            tCtx.fillStyle = i === 0 ? '#ff5a5a' : `hsl(0,80%,${light}%)`;
+            tCtx.shadowColor = i === 0 ? '#e94560' : 'transparent';
+            tCtx.shadowBlur = i === 0 ? 8 : 0;
+            const pad = i === 0 ? 2 : 3;
+            tCtx.beginPath();
+            tCtx.roundRect(s.x * TCS + pad, s.y * TCS + pad, TCS - pad * 2, TCS - pad * 2, 4);
+            tCtx.fill();
+            tCtx.shadowBlur = 0;
+        }
+
+        // 蛇头眼睛
+        if (snake.length > 0) {
+            const h = snake[0];
+            tCtx.fillStyle = '#fff';
+            tCtx.beginPath();
+            tCtx.arc((h.x + 0.68) * TCS, (h.y + 0.33) * TCS, TCS * 0.1, 0, Math.PI * 2);
+            tCtx.fill();
+            tCtx.beginPath();
+            tCtx.arc((h.x + 0.68) * TCS, (h.y + 0.67) * TCS, TCS * 0.1, 0, Math.PI * 2);
+            tCtx.fill();
+            tCtx.fillStyle = '#111';
+            tCtx.beginPath();
+            tCtx.arc((h.x + 0.68) * TCS, (h.y + 0.33) * TCS, TCS * 0.05, 0, Math.PI * 2);
+            tCtx.fill();
+            tCtx.beginPath();
+            tCtx.arc((h.x + 0.68) * TCS, (h.y + 0.67) * TCS, TCS * 0.05, 0, Math.PI * 2);
+            tCtx.fill();
+        }
+
+        // 粒子
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx; p.y += p.vy;
+            p.vy += 0.12;
+            p.life -= 0.015;
+            if (p.life <= 0) { particles.splice(i, 1); continue; }
+            tCtx.globalAlpha = p.life;
+            tCtx.fillStyle = p.color;
+            tCtx.beginPath();
+            tCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            tCtx.fill();
+        }
+        tCtx.globalAlpha = 1;
+
+        // 等待时在蛇尾位置显示指示框
+        if (waiting && snake.length > 0) {
+            const tail = snake[snake.length - 1];
+            tCtx.strokeStyle = 'rgba(78,204,163,0.6)';
+            tCtx.lineWidth = 2;
+            tCtx.setLineDash([4, 6]);
+            tCtx.strokeRect(tail.x * TCS - 2, tail.y * TCS - 2, TCS + 4, TCS + 4);
+            tCtx.setLineDash([]);
+        }
+
+        // 通关庆祝粒子爆发
+        if (completed && celebFrame % 2 === 0) {
+            const c = CROSS[Math.floor(Math.random() * CROSS.length)];
+            addParticles(c.x, c.y, 2,
+                ['#4ecca3','#ffd700','#ff5a7a','#fff'][Math.floor(Math.random()*4)]);
+        }
+    }
+
+    function loop() {
+        tick();
+        draw();
+        if (tOverlay.classList.contains('show'))
+            tutAnimId = requestAnimationFrame(loop);
+    }
+
+    function userAction() {
+        if (waiting) doSpit();
+    }
+
+    function resetTutorial() {
+        snake = [];
+        frameCount = -1;
+        waiting = false;
+        filled = new Set();
+        spitMap = new Map();
+        scriptIdx = 0;
+        completed = false;
+        particles = [];
+        celebFrame = 0;
+        showHint(null);
+        tStart.style.display = 'none';
+        tSkip.textContent = '跳过教程';
+        updateDots();
+    }
+
+    function startGame() {
+        if (tutAnimId) { cancelAnimationFrame(tutAnimId); tutAnimId = null; }
+        tOverlay.classList.remove('show');
+        loadLevel(0);
+        ensureAudio();
+    }
+
+    // 事件绑定
+    tCanvas.addEventListener('dblclick', userAction);
+    tCanvas.addEventListener('click', userAction);
+    tCanvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        userAction();
+    }, {passive: false});
+
+    tSkip.addEventListener('click', () => {
+        if (tSkip.textContent === '再学一次') {
+            resetTutorial();
+            if (!tutAnimId) loop();
+            return;
+        }
+        startGame();
+    });
+    tStart.addEventListener('click', startGame);
+
+    // 初始化
+    window.addEventListener('resize', resize);
+    resize();
+    resetTutorial();
+    loop();
+})();
 
 loadLevel(0);
 requestAnimationFrame(gameLoop);
