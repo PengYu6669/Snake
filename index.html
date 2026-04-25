@@ -1,319 +1,529 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>拼形蛇 Shape Snake</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: #0f0f1a;
-    color: #eee;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    overflow: hidden;
-    touch-action: none;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-    overscroll-behavior: none;
-  }
-  h1 {
-    margin-top: 10px;
-    font-size: 22px;
-    letter-spacing: 2px;
-    color: #e94560;
-    text-shadow: 0 0 20px rgba(233,69,96,0.3);
-  }
-  .level-label {
-    font-size: 13px;
-    color: #666680;
-    margin-top: 2px;
-    letter-spacing: 1px;
-  }
-  .stats {
-    display: flex;
-    gap: 12px;
-    margin: 8px 0;
-    font-size: 13px;
-    color: #888;
-    background: rgba(255,255,255,0.04);
-    border-radius: 10px;
-    padding: 8px 16px;
-    width: min(480px, calc(100vw - 24px));
-    justify-content: space-around;
-  }
-  .stats > div {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    white-space: nowrap;
-  }
-  .stats .num {
-    color: #fff;
-    font-weight: bold;
-    font-size: 18px;
-    font-variant-numeric: tabular-nums;
-    min-width: 28px;
-    text-align: center;
-  }
-  .stats .num.warn { color: #e94560; }
-  .stats .label-icon { font-size: 15px; margin-right: 1px; }
-  .stats .steps-bar-wrap {
-    display: none;
-    width: 100%;
-    height: 3px;
-    background: rgba(255,255,255,0.08);
-    border-radius: 2px;
-    margin-top: 2px;
-    overflow: hidden;
-  }
-  .stats .steps-bar-wrap.show { display: block; }
-  .stats .steps-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #4ecca3, #e94560);
-    border-radius: 2px;
-    transition: width 0.3s;
-  }
-  .timer-warn .num { color: #e94560; animation: timerPulse 0.5s ease-in-out infinite alternate; }
-  @keyframes timerPulse { from { opacity: 1; } to { opacity: 0.4; } }
-  #gameCanvas {
-    background: #161625;
-    border-radius: 12px;
-    box-shadow: 0 0 30px rgba(233, 69, 96, 0.12), 0 0 60px rgba(78,204,163,0.06);
-    width: min(480px, calc(100vw - 24px));
-    height: min(480px, calc(100vw - 24px));
-  }
-  .controls {
-    margin-top: 8px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-  .btn-row { display: none; }
-  button {
-    background: #232336;
-    border: 1px solid #e94560;
-    color: #eee;
-    border-radius: 10px;
-    width: 60px;
-    height: 44px;
-    font-size: 20px;
-    cursor: pointer;
-    transition: all 0.15s;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
-  }
-  button:active { background: #e94560; transform: scale(0.95); }
-  .spit-btn {
-    width: 130px;
-    background: #e94560;
-    border: none;
-    font-size: 16px;
-    font-weight: bold;
-    height: 48px;
-  }
-  .spit-btn:disabled {
-    opacity: 0.35;
-    transform: none;
-    background: #555;
-  }
-  .spit-btn:active { background: #ff6b6b; }
-  .spit-btn:disabled:active { background: #555; transform: none; }
-  .reset-btn {
-    width: 130px;
-    border-color: #4ecca3;
-    color: #4ecca3;
-    font-size: 14px;
-  }
-  .reset-btn:active { background: #4ecca3; color: #0f0f1a; }
-  .hint {
-    margin-top: 4px;
-    font-size: 12px;
-    color: #666680;
-    text-align: center;
-    line-height: 1.6;
-    padding: 0 20px;
-  }
-  .overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.85);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-  }
-  .overlay.show { display: flex; }
-  .overlay h2 { font-size: 42px; margin-bottom: 6px; }
-  .overlay .win-title { color: #4ecca3; text-shadow: 0 0 40px rgba(78,204,163,0.5); }
-  .overlay .lose-title { color: #e94560; text-shadow: 0 0 40px rgba(233,69,96,0.5); }
-  .overlay .final-title { color: #ffd700; text-shadow: 0 0 50px rgba(255,215,0,0.5); }
-  .overlay p { color: #a0a0b0; margin: 4px 0 20px; font-size: 16px; }
-  .overlay .btn-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-  .overlay button {
-    min-width: 140px;
-    height: 50px;
-    font-size: 17px;
-    background: #e94560;
-    border: none;
-    color: #fff;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: transform 0.15s;
-    padding: 0 20px;
-  }
-  .overlay button:active { transform: scale(0.95); }
-  .overlay .btn-next {
-    background: #4ecca3;
-    color: #0f0f1a;
-    font-weight: bold;
-  }
-  .overlay .btn-retry { background: #e94560; }
-  .overlay .btn-home {
-    background: #333;
-    border: 1px solid #666;
-  }
-  .poster-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    max-height: 96vh;
-    overflow-y: auto;
-    width: 100%;
-    max-width: 400px;
-    padding: 0 12px;
-  }
-  .poster-image {
-    width: 100%;
-    max-width: 340px;
-    border-radius: 20px;
-    box-shadow: 0 0 60px rgba(233,69,96,0.3), 0 20px 60px rgba(0,0,0,0.5);
-  }
-  .poster-actions {
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    max-width: 340px;
-  }
-  .poster-actions button {
-    flex: 1;
-    height: 50px;
-    font-size: 16px;
-    border-radius: 14px;
-  }
-  .poster-actions .btn-outline {
-    background: transparent;
-    border: 2px solid rgba(255,255,255,0.3);
-    color: #fff;
-  }
-  .poster-actions .btn-outline:active { background: rgba(255,255,255,0.1); }
-  .poster-actions .btn-gradient {
-    background: linear-gradient(135deg, #e94560, #ff6b35);
-    border: none;
-    color: #fff;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>拼形蛇 - 像素掌机</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  @media (max-width: 480px) {
-    body { padding: 0 4px; }
-    h1 { font-size: 17px; margin-top: 6px; }
-    .level-label { font-size: 12px; }
-    .stats { font-size: 12px; gap: 8px; padding: 6px 10px; }
-    .stats .num { font-size: 16px; min-width: 22px; }
-    .spit-btn { width: 110px; height: 42px; font-size: 14px; }
-    .reset-btn { width: 110px; height: 42px; font-size: 13px; }
-    .controls { gap: 6px; margin-top: 5px; }
-    .hint { font-size: 11px; padding: 0 12px; }
-    .overlay h2 { font-size: 32px; }
-    .overlay p { font-size: 14px; }
-    .overlay button { min-width: 120px; height: 44px; font-size: 15px; }
-  }
-  @media (max-width: 380px) {
-    h1 { font-size: 15px; margin-top: 5px; }
-    .stats { font-size: 11px; gap: 6px; padding: 4px 8px; }
-    .stats .num { font-size: 14px; min-width: 18px; }
-    .spit-btn { width: 96px; height: 38px; font-size: 13px; }
-    .reset-btn { width: 96px; height: 38px; font-size: 12px; }
-    .overlay h2 { font-size: 26px; }
-  }
-</style>
+        body {
+            background: #0f0f12;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            overscroll-behavior: none;
+            touch-action: none;
+        }
+
+        /* ===== 掌机外壳 ===== */
+        .pocket-shell {
+            width: 100%;
+            max-width: 420px;
+            background: #2a2332;
+            border-radius: 24px 24px 32px 32px;
+            padding: 24px 20px 32px;
+            box-shadow:
+                    0 20px 60px rgba(0,0,0,0.8),
+                    inset 0 2px 0 rgba(255,255,255,0.08),
+                    inset 0 -4px 0 rgba(0,0,0,0.4);
+            position: relative;
+            border: 4px solid #1a1520;
+        }
+
+        .shell-top {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-bottom: 16px;
+            opacity: 0.6;
+        }
+        .pixel-dot {
+            width: 8px;
+            height: 8px;
+            background: #ff5a7a;
+            box-shadow: 0 2px 0 #cc4460, 0 4px 0 rgba(0,0,0,0.3);
+        }
+
+        .shell-brand {
+            text-align: center;
+            color: #ff5a7a;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 0 rgba(0,0,0,0.5);
+            opacity: 0.9;
+        }
+
+        .screen-bezel {
+            background: #1e1b24;
+            border-radius: 16px;
+            padding: 14px 14px 14px;
+            box-shadow:
+                    inset 0 4px 12px rgba(0,0,0,0.6),
+                    0 1px 0 rgba(255,255,255,0.05);
+            border: 2px solid #15131a;
+            position: relative;
+        }
+
+        .screen-bezel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 20%; right: 20%; height: 40%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+            border-radius: 16px 16px 0 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .screen-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #ff5a7a;
+            font-size: 9px;
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+            padding: 0 2px;
+        }
+        .battery-led {
+            width: 6px;
+            height: 6px;
+            background: #00ffaa;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #00ffaa;
+            animation: blink 3s infinite;
+        }
+        @keyframes blink { 0%,90%,100%{opacity:1} 95%{opacity:0.3} }
+
+        /* ===== 屏幕内嵌 Stats ===== */
+        .screen-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            padding: 0 2px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            font-family: 'Courier New', Courier, monospace;
+            gap: 2px;
+        }
+        .screen-stats > div {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .screen-stats .num {
+            color: #fff;
+            font-weight: bold;
+            font-size: 13px;
+            font-variant-numeric: tabular-nums;
+            min-width: 20px;
+            text-align: center;
+        }
+        .screen-stats .num.warn { color: #e94560; }
+        .screen-stats .steps-bar-wrap {
+            display: none;
+            width: 100%;
+            height: 2px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 1px;
+            overflow: hidden;
+            margin: 2px 0;
+        }
+        .screen-stats .steps-bar-wrap.show { display: block; }
+        .screen-stats .steps-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecca3, #e94560);
+            border-radius: 1px;
+            transition: width 0.3s;
+        }
+        .timer-warn .num { color: #e94560; animation: timerPulse 0.5s ease-in-out infinite alternate; }
+        @keyframes timerPulse { from { opacity: 1; } to { opacity: 0.4; } }
+
+        /* ===== Canvas ===== */
+        #gameCanvas {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background: #0d0d0d;
+            border-radius: 6px;
+            display: block;
+            image-rendering: pixelated;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* ===== 控制区 ===== */
+        .controls-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 28px;
+            padding: 0 8px;
+        }
+
+        .dpad {
+            position: relative;
+            width: 120px;
+            height: 120px;
+        }
+        .dpad-center {
+            position: absolute;
+            top: 40px; left: 40px;
+            width: 40px; height: 40px;
+            background: #1e1b24;
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 2px 0 rgba(255,255,255,0.05);
+        }
+        .dpad-up, .dpad-down, .dpad-left, .dpad-right {
+            position: absolute;
+            background: #3a3544;
+            border-radius: 4px;
+            box-shadow:
+                    0 4px 0 #221f29,
+                    0 6px 8px rgba(0,0,0,0.4),
+                    inset 0 1px 0 rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: transform 0.05s, box-shadow 0.05s;
+            touch-action: manipulation;
+        }
+        .dpad-up:active, .dpad-down:active, .dpad-left:active, .dpad-right:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #221f29, inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .dpad-up { top: 0; left: 40px; width: 40px; height: 40px; }
+        .dpad-down { bottom: 0; left: 40px; width: 40px; height: 40px; }
+        .dpad-left { top: 40px; left: 0; width: 40px; height: 40px; }
+        .dpad-right { top: 40px; right: 0; width: 40px; height: 40px; }
+
+        .dpad-up::after, .dpad-down::after, .dpad-left::after, .dpad-right::after {
+            content: '';
+            position: absolute;
+            width: 0; height: 0;
+            border: solid transparent;
+            border-width: 6px;
+        }
+        .dpad-up::after { bottom: 10px; left: 14px; border-bottom-color: rgba(255,255,255,0.3); }
+        .dpad-down::after { top: 10px; left: 14px; border-top-color: rgba(255,255,255,0.3); }
+        .dpad-left::after { right: 10px; top: 14px; border-right-color: rgba(255,255,255,0.3); }
+        .dpad-right::after { left: 10px; top: 14px; border-left-color: rgba(255,255,255,0.3); }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            align-items: flex-end;
+            transform: rotate(-15deg);
+            margin-bottom: 8px;
+        }
+        .btn-ab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-ab .circle {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: #ff5a7a;
+            box-shadow:
+                    0 4px 0 #cc4460,
+                    0 6px 12px rgba(0,0,0,0.4),
+                    inset 0 -4px 8px rgba(0,0,0,0.2),
+                    inset 0 2px 4px rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: transform 0.05s;
+            touch-action: manipulation;
+        }
+        .btn-ab .circle:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #cc4460, inset 0 2px 8px rgba(0,0,0,0.4);
+        }
+        .btn-ab .label {
+            color: #8a7a9a;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        .btn-b .circle { background: #5a9aff; box-shadow: 0 4px 0 #4477cc, 0 6px 12px rgba(0,0,0,0.4), inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.3); }
+        .btn-b .circle:active { box-shadow: 0 0 0 #4477cc, inset 0 2px 8px rgba(0,0,0,0.4); }
+
+        .bottom-controls {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 24px;
+        }
+        .btn-pill {
+            width: 64px; height: 16px;
+            background: #3a3544;
+            border-radius: 8px;
+            box-shadow: 0 3px 0 #221f29, inset 0 1px 0 rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: transform 0.05s;
+            touch-action: manipulation;
+        }
+        .btn-pill:active { transform: translateY(3px); box-shadow: 0 0 0 #221f29; }
+        .bottom-labels {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 6px;
+            color: #6a5a7a;
+            font-size: 9px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .speaker {
+            position: absolute;
+            bottom: 32px; right: 24px;
+            display: flex;
+            gap: 3px;
+            transform: rotate(-30deg);
+            opacity: 0.4;
+        }
+        .speaker-line {
+            width: 3px; height: 24px;
+            background: #1a1520;
+            border-radius: 2px;
+        }
+
+        .screw {
+            position: absolute;
+            width: 8px; height: 8px;
+            background: #1a1520;
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .screw-tl { top: 12px; left: 12px; }
+        .screw-tr { top: 12px; right: 12px; }
+        .screw-bl { bottom: 12px; left: 12px; }
+        .screw-br { bottom: 12px; right: 12px; }
+
+        /* ===== Overlays (stay on top of shell) ===== */
+        .overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .overlay.show { display: flex; }
+        .overlay h2 { font-size: 42px; margin-bottom: 6px; }
+        .overlay .win-title { color: #4ecca3; text-shadow: 0 0 40px rgba(78,204,163,0.5); }
+        .overlay .lose-title { color: #e94560; text-shadow: 0 0 40px rgba(233,69,96,0.5); }
+        .overlay .final-title { color: #ffd700; text-shadow: 0 0 50px rgba(255,215,0,0.5); }
+        .overlay p { color: #a0a0b0; margin: 4px 0 20px; font-size: 16px; }
+        .overlay .btn-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .overlay button {
+            min-width: 140px;
+            height: 50px;
+            font-size: 17px;
+            background: #e94560;
+            border: none;
+            color: #fff;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.15s;
+            padding: 0 20px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .overlay button:active { transform: scale(0.95); }
+        .overlay .btn-next { background: #4ecca3; color: #0f0f1a; font-weight: bold; }
+        .overlay .btn-retry { background: #e94560; }
+        .overlay .btn-home { background: #333; border: 1px solid #666; }
+
+        .poster-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            max-height: 96vh;
+            overflow-y: auto;
+            width: 100%;
+            max-width: 400px;
+            padding: 0 12px;
+        }
+        .poster-image {
+            width: 100%;
+            max-width: 340px;
+            border-radius: 20px;
+            box-shadow: 0 0 60px rgba(233,69,96,0.3), 0 20px 60px rgba(0,0,0,0.5);
+        }
+        .poster-actions {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            max-width: 340px;
+        }
+        .poster-actions button {
+            flex: 1;
+            height: 50px;
+            font-size: 16px;
+            border-radius: 14px;
+        }
+        .poster-actions .btn-outline {
+            background: transparent;
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #fff;
+        }
+        .poster-actions .btn-outline:active { background: rgba(255,255,255,0.1); }
+        .poster-actions .btn-gradient {
+            background: linear-gradient(135deg, #e94560, #ff6b35);
+            border: none;
+            color: #fff;
+        }
+
+        /* 隐藏的 spitBtn（供 JS disabled 逻辑使用） */
+        #spitBtn {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        @media (max-height: 700px) {
+            .pocket-shell { padding: 16px 16px 24px; }
+            .dpad { transform: scale(0.85); }
+            .action-buttons { transform: rotate(-15deg) scale(0.9); }
+        }
+        @media (max-width: 400px) {
+            .pocket-shell { padding: 14px 12px 20px; }
+            .screen-bezel { padding: 10px; }
+            .dpad { transform: scale(0.75); }
+            .action-buttons { transform: rotate(-15deg) scale(0.8); }
+            .screen-stats { font-size: 9px; }
+            .screen-stats .num { font-size: 11px; min-width: 16px; }
+        }
+    </style>
 </head>
 <body>
 
-<h1>拼形蛇 SHAPE SNAKE</h1>
-<div class="level-label" id="levelLabel">第 1 关 · 热身</div>
+<div class="pocket-shell">
+    <div class="screw screw-tl"></div>
+    <div class="screw screw-tr"></div>
+    <div class="screw screw-bl"></div>
+    <div class="screw screw-br"></div>
 
-<div class="stats">
-  <div>
-    <span class="label-icon">👣</span>
-    <span class="num" id="steps">0</span>
-    <span id="stepsMax" style="color:#666;font-size:13px"></span>
-  </div>
-  <div>
-    <span class="label-icon">🐍</span>
-    <span class="num" id="snakeLen">5</span>
-  </div>
-  <div id="timerDisplay" style="display:none">
-    <span class="label-icon">⏱</span>
-    <span class="num" id="timerValue">0</span>
-    <span style="color:#666;font-size:13px">s</span>
-  </div>
+    <div class="shell-top">
+        <div class="pixel-dot"></div>
+        <div class="pixel-dot"></div>
+        <div class="pixel-dot"></div>
+        <div class="pixel-dot"></div>
+        <div class="pixel-dot"></div>
+    </div>
+
+    <div class="shell-brand">SHAPE-SNAKE SYSTEM</div>
+
+    <div class="screen-bezel">
+        <div class="screen-label">
+            <span>DOT MATRIX WITH STEREO SOUND</span>
+            <div class="battery-led"></div>
+        </div>
+
+        <!-- 屏幕内嵌状态栏 -->
+        <div class="screen-stats">
+            <div>
+                <span>👣</span>
+                <span class="num" id="steps">0</span>
+                <span id="stepsMax" style="color:rgba(255,255,255,0.3);font-size:10px"></span>
+            </div>
+            <div>
+                <span>🐍</span>
+                <span class="num" id="snakeLen">5</span>
+            </div>
+            <div id="timerDisplay" style="display:none">
+                <span>⏱</span>
+                <span class="num" id="timerValue">0</span>
+                <span style="color:rgba(255,255,255,0.3);font-size:10px">s</span>
+            </div>
+            <div id="levelLabel" style="color:rgba(255,255,255,0.35);font-size:9px">第1关·热身</div>
+        </div>
+        <div class="screen-stats" style="margin-top:-2px;margin-bottom:2px;padding:0">
+            <div class="steps-bar-wrap" id="stepsBarWrap" style="margin:0">
+                <div class="steps-bar-fill" id="stepsBarFill" style="width:0%"></div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+    </div>
+
+    <div class="controls-area">
+        <div class="dpad">
+            <div class="dpad-up" id="btnUp"></div>
+            <div class="dpad-left" id="btnLeft"></div>
+            <div class="dpad-center"></div>
+            <div class="dpad-right" id="btnRight"></div>
+            <div class="dpad-down" id="btnDown"></div>
+        </div>
+
+        <div class="action-buttons">
+            <div class="btn-ab btn-b" id="btnB">
+                <div class="circle"></div>
+                <div class="label">重置</div>
+            </div>
+            <div class="btn-ab" id="btnA">
+                <div class="circle"></div>
+                <div class="label">吐</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-controls">
+        <div class="btn-pill" id="btnSelect"></div>
+        <div class="btn-pill" id="btnStart"></div>
+    </div>
+    <div class="bottom-labels">
+        <span>SELECT</span>
+        <span>START</span>
+    </div>
+
+    <div class="speaker">
+        <div class="speaker-line"></div>
+        <div class="speaker-line"></div>
+        <div class="speaker-line"></div>
+        <div class="speaker-line"></div>
+        <div class="speaker-line"></div>
+    </div>
 </div>
-<div class="stats" id="stepsBarRow" style="padding:0 16px 4px;margin-top:-6px;background:none;width:min(480px,calc(100vw - 24px))">
-  <div class="steps-bar-wrap" id="stepsBarWrap">
-    <div class="steps-bar-fill" id="stepsBarFill" style="width:0%"></div>
-  </div>
-</div>
 
-<canvas id="gameCanvas" width="300" height="300"></canvas>
-
-<div class="controls">
-  <button class="spit-btn" id="spitBtn">⬛ 吐方块</button>
-  <div class="btn-row">
-    <button id="btnUp">▲</button>
-  </div>
-  <div class="btn-row">
-    <button id="btnLeft">◀</button>
-    <button id="btnDown">▼</button>
-    <button id="btnRight">▶</button>
-  </div>
-  <button class="reset-btn" id="resetBtn">↺ 重置</button>
-</div>
-
-<div class="hint">
-  滑动屏幕转向 · 双击/按键吐方块 · 填满绿色区域通关
-</div>
-
+<!-- Overlays -->
 <div class="overlay" id="winOverlay">
-  <h2 id="winTitle" class="win-title">通关!</h2>
-  <p id="winText">你成功拼出了目标图形</p>
-  <div class="btn-group" id="winButtons"></div>
+    <h2 id="winTitle" class="win-title">通关!</h2>
+    <p id="winText">你成功拼出了目标图形</p>
+    <div class="btn-group" id="winButtons"></div>
 </div>
 
 <div class="overlay" id="loseOverlay">
-  <h2 class="lose-title">GAME OVER</h2>
-  <p>游戏结束</p>
-  <div class="btn-group">
-    <button class="btn-retry" id="retryBtn">再来一次</button>
-  </div>
+    <h2 class="lose-title">GAME OVER</h2>
+    <p>游戏结束</p>
+    <div class="btn-group">
+        <button class="btn-retry" id="retryBtn">再来一次</button>
+    </div>
 </div>
 
 <div class="overlay" id="posterOverlay">
-  <div class="poster-wrapper">
-    <img id="posterImg" class="poster-image" alt="挑战失败海报" draggable="false">
-    <div class="poster-actions">
-      <button class="btn-outline" id="posterRetry">↻ 再来一次</button>
-      <button class="btn-gradient" id="posterShare">📤 分享出去</button>
+    <div class="poster-wrapper">
+        <img id="posterImg" class="poster-image" alt="挑战失败海报" draggable="false">
+        <div class="poster-actions">
+            <button class="btn-outline" id="posterRetry">↻ 再来一次</button>
+            <button class="btn-gradient" id="posterShare">📤 分享出去</button>
+        </div>
     </div>
-  </div>
 </div>
+
+<!-- 隐藏的 spitBtn（供 JS 逻辑引用） -->
+<button id="spitBtn" style="display:none"></button>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
@@ -323,46 +533,40 @@ let GRID, CELL, COLS, ROWS;
 let LOGICAL_W, LOGICAL_H;
 
 // ========== 关卡定义 ==========
-// 目标格式 [row, col] → 内部转为 "col,row" key
 const LEVELS = [
-  {
-    name: '热身',
-    grid: 12,
-    target: [[6,6],[5,6],[7,6],[6,5],[6,7]],
-    snake: [{x:0,y:6},{x:1,y:6},{x:2,y:6},{x:3,y:6},{x:4,y:6}],
-    dir: {x:1, y:0},
-    maxSteps: 99,
-    timeLimit: 0,
-    stageClear: 'auto',
-  },
-  {
-    name: '炼狱',
-    grid: 14,
-    target: [
-      // 矩形 7×8 = 56 格 (rows 3-9, cols 3-10)
-      [3,3],[3,4],[3,5],[3,6],[3,7],[3,8],[3,9],[3,10],
-      [4,3],[4,4],[4,5],[4,6],[4,7],[4,8],[4,9],[4,10],
-      [5,3],[5,4],[5,5],[5,6],[5,7],[5,8],[5,9],[5,10],
-      [6,3],[6,4],[6,5],[6,6],[6,7],[6,8],[6,9],[6,10],
-      [7,3],[7,4],[7,5],[7,6],[7,7],[7,8],[7,9],[7,10],
-      [8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],
-      [9,3],[9,4],[9,5],[9,6],[9,7],[9,8],[9,9],[9,10],
-    ],
-    snake: [{x:0,y:6},{x:1,y:6},{x:2,y:6},{x:3,y:6},{x:4,y:6}],
-    dir: {x:1, y:0},
-    maxSteps: 300,
-    timeLimit: 60,
-    resources: [
-      // 上 (rows 0-2)
-      [0,0],[0,6],[0,13],[1,3],[1,8],[1,13],
-      // 左 (cols 0-2)
-      [3,1],[4,2],[7,0],[9,1],
-      // 右 (cols 11-13)
-      [3,12],[5,12],[7,11],[9,12],
-      // 下 (rows 10-13)
-      [10,0],[10,7],[10,13],[12,3],[12,10],[13,0],[13,6],[13,13]
-    ],
-  },
+    {
+        name: '热身',
+        grid: 12,
+        target: [[6,6],[5,6],[7,6],[6,5],[6,7]],
+        snake: [{x:0,y:6},{x:1,y:6},{x:2,y:6},{x:3,y:6},{x:4,y:6}],
+        dir: {x:1, y:0},
+        maxSteps: 99,
+        timeLimit: 0,
+        stageClear: 'auto',
+    },
+    {
+        name: '炼狱',
+        grid: 14,
+        target: [
+            [3,3],[3,4],[3,5],[3,6],[3,7],[3,8],[3,9],[3,10],
+            [4,3],[4,4],[4,5],[4,6],[4,7],[4,8],[4,9],[4,10],
+            [5,3],[5,4],[5,5],[5,6],[5,7],[5,8],[5,9],[5,10],
+            [6,3],[6,4],[6,5],[6,6],[6,7],[6,8],[6,9],[6,10],
+            [7,3],[7,4],[7,5],[7,6],[7,7],[7,8],[7,9],[7,10],
+            [8,3],[8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],
+            [9,3],[9,4],[9,5],[9,6],[9,7],[9,8],[9,9],[9,10],
+        ],
+        snake: [{x:0,y:6},{x:1,y:6},{x:2,y:6},{x:3,y:6},{x:4,y:6}],
+        dir: {x:1, y:0},
+        maxSteps: 300,
+        timeLimit: 60,
+        resources: [
+            [0,0],[0,6],[0,13],[1,3],[1,8],[1,13],
+            [3,1],[4,2],[7,0],[9,1],
+            [3,12],[5,12],[7,11],[9,12],
+            [10,0],[10,7],[10,13],[12,3],[12,10],[13,0],[13,6],[13,13]
+        ],
+    },
 ];
 
 let TARGET = new Set();
@@ -377,315 +581,312 @@ let levelClearTimer = null;
 
 // ========== SoundSynth ==========
 class SoundSynth {
-  constructor() {
-    this.ctx = null;
-    this.bgmPlaying = false;
-    this._bgmTimer = null;
-  }
-
-  async unlock() {
-    // 同步创建 AudioContext（iOS 要求必须在用户手势中创建）
-    if (!this.ctx) {
-      try {
-        const Ctor = window.AudioContext || window.webkitAudioContext;
-        if (!Ctor) return;
-        this.ctx = new Ctor();
-      } catch (_) { return; }
+    constructor() {
+        this.ctx = null;
+        this.bgmPlaying = false;
+        this._bgmTimer = null;
     }
-    // 同步调用 resume（iOS 要求）
-    if (this.ctx.state === 'suspended') {
-      try { this.ctx.resume(); } catch (_) {}
+
+    async unlock() {
+        if (!this.ctx) {
+            try {
+                const Ctor = window.AudioContext || window.webkitAudioContext;
+                if (!Ctor) return;
+                this.ctx = new Ctor();
+            } catch (_) { return; }
+        }
+        if (this.ctx.state === 'suspended') {
+            try { this.ctx.resume(); } catch (_) {}
+        }
     }
-  }
 
-  _blip(freq, dur, type = 'sine', vol = 0.1) {
-    if (!this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(vol, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + dur);
-    } catch (_) {}
-  }
+    _blip(freq, dur, type = 'sine', vol = 0.1) {
+        if (!this.ctx) return;
+        try {
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(vol, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + dur);
+        } catch (_) {}
+    }
 
-  click() { this._blip(700, 0.04, 'square', 0.04); }
-  glissando() {
-    if (!this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(200, t);
-      osc.frequency.exponentialRampToValueAtTime(650, t + 0.13);
-      gain.gain.setValueAtTime(0.07, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.16);
-    } catch (_) {}
-  }
-  success() {
-    if (!this.ctx) return;
-    try {
-      [523, 659, 784].forEach((freq, i) => {
-        const delay = i * 0.08;
-        const t = this.ctx.currentTime + delay;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, t);
-        gain.gain.setValueAtTime(0.12, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.36);
-      });
-    } catch (_) {}
-  }
-  bump() {
-    if (!this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(120, t);
-      osc.frequency.exponentialRampToValueAtTime(60, t + 0.12);
-      gain.gain.setValueAtTime(0.1, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 0.15);
-      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.08, this.ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3;
-      const src = this.ctx.createBufferSource();
-      src.buffer = buf;
-      const ng = this.ctx.createGain();
-      ng.gain.setValueAtTime(0.06, t);
-      ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
-      src.connect(ng);
-      ng.connect(this.ctx.destination);
-      src.start(t);
-    } catch (_) {}
-  }
-  winFanfare() {
-    if (!this.ctx) return;
-    try {
-      [262, 330, 392, 523, 659, 784, 1047].forEach((freq, i) => {
-        const delay = i * 0.07;
-        const t = this.ctx.currentTime + delay;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = i % 2 === 0 ? 'sine' : 'triangle';
-        osc.frequency.setValueAtTime(freq, t);
-        gain.gain.setValueAtTime(0.1, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.55);
-      });
-    } catch (_) {}
-  }
-  loseSound() {
-    if (!this.ctx) return;
-    try {
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(350, t);
-      osc.frequency.exponentialRampToValueAtTime(50, t + 0.9);
-      gain.gain.setValueAtTime(0.12, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + 1);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(t);
-      osc.stop(t + 1.1);
-      const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.6, this.ctx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.2;
-      const src = this.ctx.createBufferSource();
-      src.buffer = buf;
-      const ng = this.ctx.createGain();
-      ng.gain.setValueAtTime(0.08, t);
-      ng.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-      src.connect(ng);
-      ng.connect(this.ctx.destination);
-      src.start(t);
-    } catch (_) {}
-  }
-  collect() {
-    if (!this.ctx) return;
-    try {
-      [880, 1108].forEach((freq, i) => {
-        const t = this.ctx.currentTime + i * 0.06;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, t);
-        gain.gain.setValueAtTime(0.08, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.15);
-      });
-    } catch (_) {}
-  }
-  startBGM() {
-    if (this.bgmPlaying || !this.ctx) return;
-    this.bgmPlaying = true;
-    this._scheduleBGM();
-  }
-  _scheduleBGM() {
-    if (!this.bgmPlaying || !this.ctx) return;
-    const ctx = this.ctx;
-    const tempo = 135;
-    const beat = 60 / tempo;
-    const t0 = ctx.currentTime;
-    let dest;
-    try {
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 1400;
-      filter.connect(ctx.destination);
-      dest = filter;
-    } catch (_) { dest = ctx.destination; }
-    const melody = [
-      [0, 523],[0.5, 659],[1, 784],[1.5, 1047],
-      [2, 880],[2.5, 784],[3, 659],[3.5, 523],
-      [4, 587],[4.25, 659],[4.5, 784],[4.75, 880],
-      [5, 1047],[5.5, 784],[6, 659],[6.5, 523],
-    ];
-    const bass = [[0, 262],[2, 392],[4, 294],[6, 330]];
-    melody.forEach(([b, freq]) => {
-      const t = t0 + b * beat;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.04, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.35);
-      osc.connect(gain); gain.connect(dest);
-      osc.start(t); osc.stop(t + beat * 0.4);
-    });
-    bass.forEach(([b, freq]) => {
-      const t = t0 + b * beat;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.06, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 1.8);
-      osc.connect(gain); gain.connect(dest);
-      osc.start(t); osc.stop(t + beat * 2);
-    });
-    this._bgmTimer = setTimeout(() => this._scheduleBGM(), 8 * beat * 1000);
-  }
-  startBGM2() {
-    if (this.bgmPlaying || !this.ctx) return;
-    this.bgmPlaying = true;
-    this._scheduleBGM2();
-  }
-  _scheduleBGM2() {
-    if (!this.bgmPlaying || !this.ctx) return;
-    const ctx = this.ctx;
-    const tempo = 150;
-    const beat = 60 / tempo;
-    const t0 = ctx.currentTime;
-    let dest;
-    try {
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 800;
-      filter.connect(ctx.destination);
-      dest = filter;
-    } catch (_) { dest = ctx.destination; }
-    const melody = [
-      [0, 220],[0.5, 262],[1, 311],[1.5, 330],
-      [2, 392],[2.5, 440],[3, 392],[3.5, 330],
-      [4, 311],[4.5, 262],[5, 220],
-    ];
-    const bass = [[0, 110],[2, 110],[4, 110],[6, 98]];
-    const pad = [[0, 55],[4, 49]];
-    melody.forEach(([b, freq]) => {
-      const t = t0 + b * beat;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.03, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.35);
-      osc.connect(gain); gain.connect(dest);
-      osc.start(t); osc.stop(t + beat * 0.4);
-    });
-    bass.forEach(([b, freq]) => {
-      const t = t0 + b * beat;
-      for (let i = 0; i < 4; i++) {
-        const tt = t + i * beat * 0.5;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq * (i % 2 === 0 ? 1 : 1.5), tt);
-        gain.gain.setValueAtTime(0.06, tt);
-        gain.gain.exponentialRampToValueAtTime(0.001, tt + beat * 0.3);
-        osc.connect(gain); gain.connect(dest);
-        osc.start(tt); osc.stop(tt + beat * 0.35);
-      }
-    });
-    pad.forEach(([b, freq]) => {
-      const t = t0 + b * beat * 4;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, t);
-      gain.gain.setValueAtTime(0.04, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 8);
-      osc.connect(gain); gain.connect(dest);
-      osc.start(t); osc.stop(t + beat * 8.5);
-    });
-    this._bgmTimer = setTimeout(() => this._scheduleBGM2(), 8 * beat * 1000);
-  }
-  stopBGM() {
-    this.bgmPlaying = false;
-    if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
-  }
-  reset() { this.stopBGM(); }
+    click() { this._blip(700, 0.04, 'square', 0.04); }
+    glissando() {
+        if (!this.ctx) return;
+        try {
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(200, t);
+            osc.frequency.exponentialRampToValueAtTime(650, t + 0.13);
+            gain.gain.setValueAtTime(0.07, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.16);
+        } catch (_) {}
+    }
+    success() {
+        if (!this.ctx) return;
+        try {
+            [523, 659, 784].forEach((freq, i) => {
+                const delay = i * 0.08;
+                const t = this.ctx.currentTime + delay;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.12, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.36);
+            });
+        } catch (_) {}
+    }
+    bump() {
+        if (!this.ctx) return;
+        try {
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(120, t);
+            osc.frequency.exponentialRampToValueAtTime(60, t + 0.12);
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.15);
+            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.08, this.ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.3;
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf;
+            const ng = this.ctx.createGain();
+            ng.gain.setValueAtTime(0.06, t);
+            ng.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+            src.connect(ng);
+            ng.connect(this.ctx.destination);
+            src.start(t);
+        } catch (_) {}
+    }
+    winFanfare() {
+        if (!this.ctx) return;
+        try {
+            [262, 330, 392, 523, 659, 784, 1047].forEach((freq, i) => {
+                const delay = i * 0.07;
+                const t = this.ctx.currentTime + delay;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.1, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.55);
+            });
+        } catch (_) {}
+    }
+    loseSound() {
+        if (!this.ctx) return;
+        try {
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(350, t);
+            osc.frequency.exponentialRampToValueAtTime(50, t + 0.9);
+            gain.gain.setValueAtTime(0.12, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 1);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 1.1);
+            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.6, this.ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.2;
+            const src = this.ctx.createBufferSource();
+            src.buffer = buf;
+            const ng = this.ctx.createGain();
+            ng.gain.setValueAtTime(0.08, t);
+            ng.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+            src.connect(ng);
+            ng.connect(this.ctx.destination);
+            src.start(t);
+        } catch (_) {}
+    }
+    collect() {
+        if (!this.ctx) return;
+        try {
+            [880, 1108].forEach((freq, i) => {
+                const t = this.ctx.currentTime + i * 0.06;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(0.08, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.15);
+            });
+        } catch (_) {}
+    }
+    startBGM() {
+        if (this.bgmPlaying || !this.ctx) return;
+        this.bgmPlaying = true;
+        this._scheduleBGM();
+    }
+    _scheduleBGM() {
+        if (!this.bgmPlaying || !this.ctx) return;
+        const ctx = this.ctx;
+        const tempo = 135;
+        const beat = 60 / tempo;
+        const t0 = ctx.currentTime;
+        let dest;
+        try {
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 1400;
+            filter.connect(ctx.destination);
+            dest = filter;
+        } catch (_) { dest = ctx.destination; }
+        const melody = [
+            [0, 523],[0.5, 659],[1, 784],[1.5, 1047],
+            [2, 880],[2.5, 784],[3, 659],[3.5, 523],
+            [4, 587],[4.25, 659],[4.5, 784],[4.75, 880],
+            [5, 1047],[5.5, 784],[6, 659],[6.5, 523],
+        ];
+        const bass = [[0, 262],[2, 392],[4, 294],[6, 330]];
+        melody.forEach(([b, freq]) => {
+            const t = t0 + b * beat;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.04, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.35);
+            osc.connect(gain); gain.connect(dest);
+            osc.start(t); osc.stop(t + beat * 0.4);
+        });
+        bass.forEach(([b, freq]) => {
+            const t = t0 + b * beat;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.06, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 1.8);
+            osc.connect(gain); gain.connect(dest);
+            osc.start(t); osc.stop(t + beat * 2);
+        });
+        this._bgmTimer = setTimeout(() => this._scheduleBGM(), 8 * beat * 1000);
+    }
+    startBGM2() {
+        if (this.bgmPlaying || !this.ctx) return;
+        this.bgmPlaying = true;
+        this._scheduleBGM2();
+    }
+    _scheduleBGM2() {
+        if (!this.bgmPlaying || !this.ctx) return;
+        const ctx = this.ctx;
+        const tempo = 150;
+        const beat = 60 / tempo;
+        const t0 = ctx.currentTime;
+        let dest;
+        try {
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 800;
+            filter.connect(ctx.destination);
+            dest = filter;
+        } catch (_) { dest = ctx.destination; }
+        const melody = [
+            [0, 220],[0.5, 262],[1, 311],[1.5, 330],
+            [2, 392],[2.5, 440],[3, 392],[3.5, 330],
+            [4, 311],[4.5, 262],[5, 220],
+        ];
+        const bass = [[0, 110],[2, 110],[4, 110],[6, 98]];
+        const pad = [[0, 55],[4, 49]];
+        melody.forEach(([b, freq]) => {
+            const t = t0 + b * beat;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.03, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 0.35);
+            osc.connect(gain); gain.connect(dest);
+            osc.start(t); osc.stop(t + beat * 0.4);
+        });
+        bass.forEach(([b, freq]) => {
+            const t = t0 + b * beat;
+            for (let i = 0; i < 4; i++) {
+                const tt = t + i * beat * 0.5;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq * (i % 2 === 0 ? 1 : 1.5), tt);
+                gain.gain.setValueAtTime(0.06, tt);
+                gain.gain.exponentialRampToValueAtTime(0.001, tt + beat * 0.3);
+                osc.connect(gain); gain.connect(dest);
+                osc.start(tt); osc.stop(tt + beat * 0.35);
+            }
+        });
+        pad.forEach(([b, freq]) => {
+            const t = t0 + b * beat * 4;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, t);
+            gain.gain.setValueAtTime(0.04, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + beat * 8);
+            osc.connect(gain); gain.connect(dest);
+            osc.start(t); osc.stop(t + beat * 8.5);
+        });
+        this._bgmTimer = setTimeout(() => this._scheduleBGM2(), 8 * beat * 1000);
+    }
+    stopBGM() {
+        this.bgmPlaying = false;
+        if (this._bgmTimer) { clearTimeout(this._bgmTimer); this._bgmTimer = null; }
+    }
+    reset() { this.stopBGM(); }
 }
 
 const sound = new SoundSynth();
 let audioReady = false;
 
-// 移动端音频：每次触摸都尝试创建/恢复 AudioContext（iOS 要求同步创建）
 function ensureAudio() {
-  sound.unlock();
-  if (sound.ctx && !audioReady) {
-    audioReady = true;
-    sound.startBGM();
-  }
+    sound.unlock();
+    if (sound.ctx && !audioReady) {
+        audioReady = true;
+        if (currentLevel >= 1) sound.startBGM2();
+        else sound.startBGM();
+    }
 }
 document.addEventListener('touchstart', ensureAudio, { passive: true });
 document.addEventListener('keydown', ensureAudio, { passive: true });
 document.addEventListener('click', ensureAudio, { passive: true });
 
-// 保活：每3秒检查 AudioContext 状态
 setInterval(() => {
-  if (sound.ctx && sound.ctx.state === 'suspended') {
-    sound.ctx.resume();
-  }
+    if (sound.ctx && sound.ctx.state === 'suspended') {
+        sound.ctx.resume();
+    }
 }, 3000);
 
 // ========== 连续移动 ==========
@@ -694,813 +895,792 @@ let lastMoveSucceeded = true;
 const MOVE_INTERVAL = 350;
 
 function setDirection(dx, dy) {
-  if (gameOver || fx.celebrating) return;
-  if (dx === -dir.x && dy === -dir.y && snake.length > 1) return;
-  if (!gameStarted) gameStarted = true;
-  dir = {x: dx, y: dy};
-  sound.glissando();
-  tryMove(true);
+    if (gameOver || fx.celebrating) return;
+    if (dx === -dir.x && dy === -dir.y && snake.length > 1) return;
+    if (!gameStarted) gameStarted = true;
+    dir = {x: dx, y: dy};
+    sound.glissando();
+    tryMove(true);
 }
 
 // ========== 动画效果系统 ==========
 const fx = {
-  particles: [], pulses: [], trail: [],
-  shake: 0, frame: 0,
-  celebrating: false, celebTimer: 0, flashAlpha: 0,
+    particles: [], pulses: [], trail: [],
+    shake: 0, frame: 0,
+    celebrating: false, celebTimer: 0, flashAlpha: 0,
 };
 
 function triggerPulse(x, y) {
-  sound.success();
-  fx.pulses.push({ x: x * CELL + CELL/2, y: y * CELL + CELL/2, life: 1, maxR: CELL * 1.2 });
+    sound.success();
+    fx.pulses.push({ x: x * CELL + CELL/2, y: y * CELL + CELL/2, life: 1, maxR: CELL * 1.2 });
 }
 function triggerParticles(x, y, count, color, opts = {}) {
-  const spread = opts.spread || 3;
-  const gravity = opts.gravity ?? 0.08;
-  for (let i = 0; i < count; i++) {
-    const angle = Math.random() * 2 * Math.PI;
-    const speed = 0.5 + Math.random() * spread;
-    fx.particles.push({
-      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1,
-      life: 0.8 + Math.random() * 0.4,
-      color: color || '#4ecca3', size: 1.5 + Math.random() * 2.5, gravity,
-    });
-  }
+    const spread = opts.spread || 3;
+    const gravity = opts.gravity ?? 0.08;
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * 2 * Math.PI;
+        const speed = 0.5 + Math.random() * spread;
+        fx.particles.push({
+            x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1,
+            life: 0.8 + Math.random() * 0.4,
+            color: color || '#4ecca3', size: 1.5 + Math.random() * 2.5, gravity,
+        });
+    }
 }
 function triggerShake(intensity) {
-  fx.shake = Math.max(fx.shake, intensity);
-  sound.bump();
-  try { if (navigator.vibrate) navigator.vibrate(intensity * 8); } catch (_) {}
+    fx.shake = Math.max(fx.shake, intensity);
+    sound.bump();
+    try { if (navigator.vibrate) navigator.vibrate(intensity * 8); } catch (_) {}
 }
 function triggerCelebration() {
-  fx.celebrating = true;
-  fx.celebTimer = 90;
-  fx.flashAlpha = 0.6;
-  sound.winFanfare();
-  sound.stopBGM();
-  clearInterval(timerInterval);
-  TARGET.forEach(key => {
-    const [cx, cy] = key.split(',').map(Number);
-    for (let i = 0; i < 8; i++)
-      triggerParticles(cx * CELL + CELL/2, cy * CELL + CELL/2, 1, '#4ecca3', { spread: 5, gravity: 0.02 });
-  });
+    fx.celebrating = true;
+    fx.celebTimer = 90;
+    fx.flashAlpha = 0.6;
+    sound.winFanfare();
+    sound.stopBGM();
+    clearInterval(timerInterval);
+    TARGET.forEach(key => {
+        const [cx, cy] = key.split(',').map(Number);
+        for (let i = 0; i < 8; i++)
+            triggerParticles(cx * CELL + CELL/2, cy * CELL + CELL/2, 1, '#4ecca3', { spread: 5, gravity: 0.02 });
+    });
 }
 
 function updateEffects() {
-  fx.frame++;
-  for (const p of fx.particles) {
-    p.x += p.vx; p.y += p.vy;
-    p.vy += p.gravity || 0.08;
-    p.vx *= 0.97; p.life -= 0.015;
-  }
-  fx.particles = fx.particles.filter(p => p.life > 0);
-  for (const p of fx.pulses) p.life -= 0.035;
-  fx.pulses = fx.pulses.filter(p => p.life > 0);
-  if (fx.shake > 0) fx.shake *= 0.85;
-  if (fx.shake < 0.3) fx.shake = 0;
-  if (fx.flashAlpha > 0) fx.flashAlpha *= 0.92;
-  if (fx.flashAlpha < 0.01) fx.flashAlpha = 0;
-
-  if (fx.celebrating) {
-    fx.celebTimer--;
-    if (fx.celebTimer > 30 && fx.frame % 4 === 0) {
-      const arr = [...TARGET];
-      const key = arr[Math.floor(Math.random() * arr.length)];
-      const [cx, cy] = key.split(',').map(Number);
-      triggerParticles(cx * CELL + CELL/2, cy * CELL + CELL/2, 2,
-        ['#4ecca3','#e94560','#ff6b6b','#fff'][Math.floor(Math.random()*4)],
-        { spread: 4, gravity: 0.02 });
+    fx.frame++;
+    for (const p of fx.particles) {
+        p.x += p.vx; p.y += p.vy;
+        p.vy += p.gravity || 0.08;
+        p.vx *= 0.97; p.life -= 0.015;
     }
-    if (fx.celebTimer <= 0) {
-      fx.celebrating = false;
-      if (currentLevel === 0 && LEVELS[currentLevel].stageClear === 'auto')
-        showLevelClear();
-      else
-        showWinScreen();
-    }
-  }
+    fx.particles = fx.particles.filter(p => p.life > 0);
+    for (const p of fx.pulses) p.life -= 0.035;
+    fx.pulses = fx.pulses.filter(p => p.life > 0);
+    if (fx.shake > 0) fx.shake *= 0.85;
+    if (fx.shake < 0.3) fx.shake = 0;
+    if (fx.flashAlpha > 0) fx.flashAlpha *= 0.92;
+    if (fx.flashAlpha < 0.01) fx.flashAlpha = 0;
 
-  if (snake && snake.length > 0) {
-    fx.trail.push({ ...snake[0] });
-    if (fx.trail.length > 8) fx.trail.shift();
-  }
+    if (fx.celebrating) {
+        fx.celebTimer--;
+        if (fx.celebTimer > 30 && fx.frame % 4 === 0) {
+            const arr = [...TARGET];
+            const key = arr[Math.floor(Math.random() * arr.length)];
+            const [cx, cy] = key.split(',').map(Number);
+            triggerParticles(cx * CELL + CELL/2, cy * CELL + CELL/2, 2,
+                ['#4ecca3','#e94560','#ff6b6b','#fff'][Math.floor(Math.random()*4)],
+                { spread: 4, gravity: 0.02 });
+        }
+        if (fx.celebTimer <= 0) {
+            fx.celebrating = false;
+            if (currentLevel === 0 && LEVELS[currentLevel].stageClear === 'auto')
+                showLevelClear();
+            else
+                showWinScreen();
+        }
+    }
+
+    if (snake && snake.length > 0) {
+        fx.trail.push({ ...snake[0] });
+        if (fx.trail.length > 8) fx.trail.shift();
+    }
 }
 
 // ========== UI ==========
 function showLevelClear() {
-  document.getElementById('winTitle').textContent = '🎉 天才！';
-  document.getElementById('winTitle').className = 'win-title';
-  document.getElementById('winText').textContent = '准备迎接真正的挑战';
-  document.getElementById('winButtons').innerHTML = '';
-  document.getElementById('winOverlay').classList.add('show');
-  levelClearTimer = setTimeout(() => {
-    if (document.getElementById('winOverlay').classList.contains('show')) {
-      document.getElementById('winOverlay').classList.remove('show');
-      loadLevel(1);
-      ensureAudio();
-    }
-  }, 1500);
+    document.getElementById('winTitle').textContent = '🎉 天才！';
+    document.getElementById('winTitle').className = 'win-title';
+    document.getElementById('winText').textContent = '准备迎接真正的挑战';
+    document.getElementById('winButtons').innerHTML = '';
+    document.getElementById('winOverlay').classList.add('show');
+    levelClearTimer = setTimeout(() => {
+        if (document.getElementById('winOverlay').classList.contains('show')) {
+            document.getElementById('winOverlay').classList.remove('show');
+            loadLevel(1);
+            ensureAudio();
+        }
+    }, 1500);
 }
 
 function showWinScreen() {
-  const isLast = currentLevel >= LEVELS.length - 1;
-  document.getElementById('winTitle').textContent = isLast ? '全部通关!' : '通关!';
-  document.getElementById('winTitle').className = isLast ? 'final-title' : 'win-title';
-  document.getElementById('winText').textContent = `步数 ${steps} · 蛇长 ${snake.length}`;
-  const btns = document.getElementById('winButtons');
-  if (isLast) {
-    btns.innerHTML = `<button class="btn-next" id="finalRestartBtn">再玩一次</button>`;
-  } else {
-    btns.innerHTML = `<button class="btn-next" id="nextLevelBtn">下一关 →</button> <button class="btn-home" id="winRestartBtn">重来</button>`;
-  }
-  document.getElementById('winOverlay').classList.add('show');
-  document.getElementById('nextLevelBtn')?.addEventListener('click', () => {
-    document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel + 1); ensureAudio();
-  }, { once: true });
-  document.getElementById('winRestartBtn')?.addEventListener('click', () => {
-    document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel); ensureAudio();
-  }, { once: true });
-  document.getElementById('finalRestartBtn')?.addEventListener('click', () => {
-    document.getElementById('winOverlay').classList.remove('show'); loadLevel(0); ensureAudio();
-  }, { once: true });
+    const isLast = currentLevel >= LEVELS.length - 1;
+    document.getElementById('winTitle').textContent = isLast ? '全部通关!' : '通关!';
+    document.getElementById('winTitle').className = isLast ? 'final-title' : 'win-title';
+    document.getElementById('winText').textContent = `步数 ${steps} · 蛇长 ${snake.length}`;
+    const btns = document.getElementById('winButtons');
+    if (isLast) {
+        btns.innerHTML = `<button class="btn-next" id="finalRestartBtn">再玩一次</button>`;
+    } else {
+        btns.innerHTML = `<button class="btn-next" id="nextLevelBtn">下一关 →</button> <button class="btn-home" id="winRestartBtn">重来</button>`;
+    }
+    document.getElementById('winOverlay').classList.add('show');
+    document.getElementById('nextLevelBtn')?.addEventListener('click', () => {
+        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel + 1); ensureAudio();
+    }, { once: true });
+    document.getElementById('winRestartBtn')?.addEventListener('click', () => {
+        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel); ensureAudio();
+    }, { once: true });
+    document.getElementById('finalRestartBtn')?.addEventListener('click', () => {
+        document.getElementById('winOverlay').classList.remove('show'); loadLevel(0); ensureAudio();
+    }, { once: true });
 }
 
 function showLoseScreen() {
-  document.getElementById('loseOverlay').classList.add('show');
-  sound.loseSound(); sound.stopBGM();
-  clearInterval(timerInterval);
+    document.getElementById('loseOverlay').classList.add('show');
+    sound.loseSound(); sound.stopBGM();
+    clearInterval(timerInterval);
 }
 
 document.getElementById('retryBtn').addEventListener('click', () => {
-  document.getElementById('loseOverlay').classList.remove('show');
-  loadLevel(currentLevel); ensureAudio();
+    document.getElementById('loseOverlay').classList.remove('show');
+    loadLevel(currentLevel); ensureAudio();
 });
 
 // ========== 第2关结束海报 ==========
-function addNoise(ctx, intensity) {
-  const w = ctx.canvas.width, h = ctx.canvas.height;
-  const imgData = ctx.getImageData(0, 0, w, h);
-  const d = imgData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    if (Math.random() < 0.08) {
-      const v = (Math.random() - 0.5) * intensity;
-      d[i] = Math.min(255, Math.max(0, d[i] + v));
-      d[i+1] = Math.min(255, Math.max(0, d[i+1] + v));
-      d[i+2] = Math.min(255, Math.max(0, d[i+2] + v));
+function addNoise(pctx, intensity) {
+    const w = pctx.canvas.width, h = pctx.canvas.height;
+    const imgData = pctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+        if (Math.random() < 0.08) {
+            const v = (Math.random() - 0.5) * intensity;
+            d[i] = Math.min(255, Math.max(0, d[i] + v));
+            d[i+1] = Math.min(255, Math.max(0, d[i+1] + v));
+            d[i+2] = Math.min(255, Math.max(0, d[i+2] + v));
+        }
     }
-  }
-  ctx.putImageData(imgData, 0, 0);
+    pctx.putImageData(imgData, 0, 0);
 }
 
 function generatePoster(remaining) {
-  const PW = 375, PH = 500;
-  const dpr = window.devicePixelRatio || 1;
-  const totalTarget = LEVELS[1].target.length;
-  const filled = totalTarget - remaining;
-  const pct = Math.round((filled / totalTarget) * 100);
-  const pc = document.createElement('canvas');
-  pc.width = PW * dpr; pc.height = PH * dpr;
-  const pctx = pc.getContext('2d');
-  pctx.scale(dpr, dpr);
+    const PW = 375, PH = 500;
+    const dpr = window.devicePixelRatio || 1;
+    const totalTarget = LEVELS[1].target.length;
+    const filled = totalTarget - remaining;
+    const pct = Math.round((filled / totalTarget) * 100);
+    const pc = document.createElement('canvas');
+    pc.width = PW * dpr; pc.height = PH * dpr;
+    const pctx = pc.getContext('2d');
+    pctx.scale(dpr, dpr);
 
-  // 深色渐变背景
-  const grad = pctx.createLinearGradient(0, 0, 0, PH);
-  grad.addColorStop(0, '#1a0a2e');
-  grad.addColorStop(0.3, '#2d0a1e');
-  grad.addColorStop(0.6, '#0f0f1a');
-  grad.addColorStop(1, '#000');
-  pctx.fillStyle = grad;
-  pctx.fillRect(0, 0, PW, PH);
+    const grad = pctx.createLinearGradient(0, 0, 0, PH);
+    grad.addColorStop(0, '#1a0a2e');
+    grad.addColorStop(0.3, '#2d0a1e');
+    grad.addColorStop(0.6, '#0f0f1a');
+    grad.addColorStop(1, '#000');
+    pctx.fillStyle = grad;
+    pctx.fillRect(0, 0, PW, PH);
 
-  // 顶部光晕
-  const topGlow = pctx.createRadialGradient(188, 100, 0, 188, 100, 280);
-  topGlow.addColorStop(0, 'rgba(233,69,96,0.12)');
-  topGlow.addColorStop(1, 'rgba(233,69,96,0)');
-  pctx.fillStyle = topGlow;
-  pctx.fillRect(0, 0, PW, PH);
+    const topGlow = pctx.createRadialGradient(188, 100, 0, 188, 100, 280);
+    topGlow.addColorStop(0, 'rgba(233,69,96,0.12)');
+    topGlow.addColorStop(1, 'rgba(233,69,96,0)');
+    pctx.fillStyle = topGlow;
+    pctx.fillRect(0, 0, PW, PH);
 
-  // 背景网格
-  pctx.strokeStyle = 'rgba(255,255,255,0.03)';
-  pctx.lineWidth = 0.5;
-  for (let i = 0; i < PW; i += 18) {
-    pctx.beginPath(); pctx.moveTo(i, 0); pctx.lineTo(i, PH); pctx.stroke();
-  }
-  for (let i = 0; i < PH; i += 18) {
-    pctx.beginPath(); pctx.moveTo(0, i); pctx.lineTo(PW, i); pctx.stroke();
-  }
+    pctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    pctx.lineWidth = 0.5;
+    for (let i = 0; i < PW; i += 18) {
+        pctx.beginPath(); pctx.moveTo(i, 0); pctx.lineTo(i, PH); pctx.stroke();
+    }
+    for (let i = 0; i < PH; i += 18) {
+        pctx.beginPath(); pctx.moveTo(0, i); pctx.lineTo(PW, i); pctx.stroke();
+    }
 
-  // 噪点纹理
-  pctx.save();
-  pctx.setTransform(1, 0, 0, 1, 0, 0);
-  addNoise(pctx, 20);
-  pctx.restore();
+    pctx.save();
+    pctx.setTransform(1, 0, 0, 1, 0, 0);
+    addNoise(pctx, 20);
+    pctx.restore();
 
-  const fontBase = '"PingFang SC","Microsoft YaHei",Arial,sans-serif';
-  pctx.textAlign = 'center';
+    const fontBase = '"PingFang SC","Microsoft YaHei",Arial,sans-serif';
+    pctx.textAlign = 'center';
 
-  // 顶部
-  pctx.fillStyle = 'rgba(255,255,255,0.45)';
-  pctx.font = `12px ${fontBase}`;
-  pctx.fillText('拼形蛇 · 第二关', PW / 2, 34);
+    pctx.fillStyle = 'rgba(255,255,255,0.45)';
+    pctx.font = `12px ${fontBase}`;
+    pctx.fillText('拼形蛇 · 第二关', PW / 2, 34);
 
-  pctx.fillStyle = '#e94560';
-  pctx.font = `bold 14px ${fontBase}`;
-  pctx.fillText('😵 挑 战 失 败', PW / 2, 60);
+    pctx.fillStyle = '#e94560';
+    pctx.font = `bold 14px ${fontBase}`;
+    pctx.fillText('😵 挑 战 失 败', PW / 2, 60);
 
-  // 「别笑」
-  pctx.save();
-  pctx.translate(PW / 2, 140);
-  pctx.rotate(-0.05);
-  pctx.shadowColor = '#e94560';
-  pctx.shadowBlur = 40;
-  pctx.fillStyle = '#ffffff';
-  pctx.font = `bold 60px ${fontBase}`;
-  pctx.strokeStyle = '#000';
-  pctx.lineWidth = 10;
-  pctx.strokeText('别笑', 0, 0);
-  pctx.shadowBlur = 0;
-  pctx.fillText('别笑', 0, 0);
-  pctx.restore();
+    pctx.save();
+    pctx.translate(PW / 2, 140);
+    pctx.rotate(-0.05);
+    pctx.shadowColor = '#e94560';
+    pctx.shadowBlur = 40;
+    pctx.fillStyle = '#ffffff';
+    pctx.font = `bold 60px ${fontBase}`;
+    pctx.strokeStyle = '#000';
+    pctx.lineWidth = 10;
+    pctx.strokeText('别笑', 0, 0);
+    pctx.shadowBlur = 0;
+    pctx.fillText('别笑', 0, 0);
+    pctx.restore();
 
-  // 副文案
-  pctx.fillStyle = '#ff4466';
-  pctx.font = `bold 17px ${fontBase}`;
-  pctx.fillText('「你也过不了第二关」', PW / 2, 208);
+    pctx.fillStyle = '#ff4466';
+    pctx.font = `bold 17px ${fontBase}`;
+    pctx.fillText('「你也过不了第二关」', PW / 2, 208);
 
-  // 进度环
-  const ringCX = PW / 2, ringCY = 280, ringR = 42;
-  pctx.beginPath();
-  pctx.arc(ringCX, ringCY, ringR, 0, Math.PI * 2);
-  pctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  pctx.lineWidth = 8;
-  pctx.stroke();
-  const arcEnd = (filled / totalTarget) * Math.PI * 2 - Math.PI / 2;
-  pctx.beginPath();
-  pctx.arc(ringCX, ringCY, ringR, -Math.PI / 2, arcEnd);
-  pctx.strokeStyle = '#4ecca3';
-  pctx.lineWidth = 8;
-  pctx.lineCap = 'round';
-  pctx.stroke();
-  pctx.fillStyle = '#fff';
-  pctx.font = `bold 24px ${fontBase}`;
-  pctx.fillText(`${pct}%`, ringCX, ringCY + 4);
-  pctx.fillStyle = '#888';
-  pctx.font = `11px ${fontBase}`;
-  pctx.fillText('完成度', ringCX, ringCY + 26);
-
-  // 数据卡
-  const cardX = 28, cardY = 340, cardW = 319, cardH = 72;
-  pctx.save();
-  pctx.shadowColor = 'rgba(233,69,96,0.15)';
-  pctx.shadowBlur = 24;
-  pctx.beginPath();
-  pctx.roundRect(cardX, cardY, cardW, cardH, 14);
-  pctx.fillStyle = 'rgba(255,255,255,0.05)';
-  pctx.fill();
-  pctx.restore();
-  pctx.beginPath();
-  pctx.roundRect(cardX, cardY, cardW, cardH, 14);
-  pctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  pctx.lineWidth = 1;
-  pctx.stroke();
-
-  const dataY = cardY + 28;
-  const cols = [
-    { label: '已填充', value: `${filled}`, color: '#4ecca3' },
-    { label: '差一点', value: `${remaining}`, color: '#e94560' },
-    { label: '总目标', value: `${totalTarget}`, color: '#aaa' },
-  ];
-  const colW = cardW / 3;
-  cols.forEach((col, i) => {
-    const cx = cardX + colW * i + colW / 2;
-    pctx.fillStyle = '#777';
-    pctx.font = `11px ${fontBase}`;
-    pctx.fillText(col.label, cx, dataY);
-    pctx.fillStyle = col.color;
-    pctx.font = `bold 26px ${fontBase}`;
-    pctx.fillText(col.value, cx, dataY + 34);
-  });
-  for (let i = 1; i < 3; i++) {
-    const lx = cardX + colW * i;
+    const ringCX = PW / 2, ringCY = 280, ringR = 42;
     pctx.beginPath();
-    pctx.moveTo(lx, cardY + 14);
-    pctx.lineTo(lx, cardY + cardH - 14);
-    pctx.strokeStyle = 'rgba(255,255,255,0.04)';
+    pctx.arc(ringCX, ringCY, ringR, 0, Math.PI * 2);
+    pctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    pctx.lineWidth = 8;
+    pctx.stroke();
+    const arcEnd = (filled / totalTarget) * Math.PI * 2 - Math.PI / 2;
+    pctx.beginPath();
+    pctx.arc(ringCX, ringCY, ringR, -Math.PI / 2, arcEnd);
+    pctx.strokeStyle = '#4ecca3';
+    pctx.lineWidth = 8;
+    pctx.lineCap = 'round';
+    pctx.stroke();
+    pctx.fillStyle = '#fff';
+    pctx.font = `bold 24px ${fontBase}`;
+    pctx.fillText(`${pct}%`, ringCX, ringCY + 4);
+    pctx.fillStyle = '#888';
+    pctx.font = `11px ${fontBase}`;
+    pctx.fillText('完成度', ringCX, ringCY + 26);
+
+    const cardX = 28, cardY = 340, cardW = 319, cardH = 72;
+    pctx.save();
+    pctx.shadowColor = 'rgba(233,69,96,0.15)';
+    pctx.shadowBlur = 24;
+    pctx.beginPath();
+    pctx.roundRect(cardX, cardY, cardW, cardH, 14);
+    pctx.fillStyle = 'rgba(255,255,255,0.05)';
+    pctx.fill();
+    pctx.restore();
+    pctx.beginPath();
+    pctx.roundRect(cardX, cardY, cardW, cardH, 14);
+    pctx.strokeStyle = 'rgba(255,255,255,0.06)';
     pctx.lineWidth = 1;
     pctx.stroke();
-  }
 
-  // 装饰线
-  pctx.strokeStyle = 'rgba(255,255,255,0.05)';
-  pctx.lineWidth = 1;
-  pctx.beginPath();
-  pctx.moveTo(50, 478);
-  pctx.lineTo(PW - 50, 478);
-  pctx.stroke();
+    const dataY = cardY + 28;
+    const cols = [
+        { label: '已填充', value: `${filled}`, color: '#4ecca3' },
+        { label: '差一点', value: `${remaining}`, color: '#e94560' },
+        { label: '总目标', value: `${totalTarget}`, color: '#aaa' },
+    ];
+    const colW = cardW / 3;
+    cols.forEach((col, i) => {
+        const cx = cardX + colW * i + colW / 2;
+        pctx.fillStyle = '#777';
+        pctx.font = `11px ${fontBase}`;
+        pctx.fillText(col.label, cx, dataY);
+        pctx.fillStyle = col.color;
+        pctx.font = `bold 26px ${fontBase}`;
+        pctx.fillText(col.value, cx, dataY + 34);
+    });
+    for (let i = 1; i < 3; i++) {
+        const lx = cardX + colW * i;
+        pctx.beginPath();
+        pctx.moveTo(lx, cardY + 14);
+        pctx.lineTo(lx, cardY + cardH - 14);
+        pctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        pctx.lineWidth = 1;
+        pctx.stroke();
+    }
 
-  return pc;
+    pctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    pctx.lineWidth = 1;
+    pctx.beginPath();
+    pctx.moveTo(50, 478);
+    pctx.lineTo(PW - 50, 478);
+    pctx.stroke();
+
+    return pc;
 }
 
 function getRemainingCells() {
-  let count = 0;
-  for (const key of TARGET) {
-    const [cx, cy] = key.split(',').map(Number);
-    if (!snake.some(s => s.x === cx && s.y === cy) && !spitBlocks.has(key)) count++;
-  }
-  return count;
+    let count = 0;
+    for (const key of TARGET) {
+        const [cx, cy] = key.split(',').map(Number);
+        if (!snake.some(s => s.x === cx && s.y === cy) && !spitBlocks.has(key)) count++;
+    }
+    return count;
 }
 
 function showPoster() {
-  clearInterval(timerInterval);
-  sound.stopBGM();
-  const remaining = getRemainingCells();
-  const pc = generatePoster(remaining);
-  document.getElementById('posterImg').src = pc.toDataURL('image/png');
-  document.getElementById('posterOverlay').classList.add('show');
+    clearInterval(timerInterval);
+    sound.stopBGM();
+    const remaining = getRemainingCells();
+    const pc = generatePoster(remaining);
+    document.getElementById('posterImg').src = pc.toDataURL('image/png');
+    document.getElementById('posterOverlay').classList.add('show');
 }
 
 document.getElementById('posterRetry').addEventListener('click', () => {
-  document.getElementById('posterOverlay').classList.remove('show');
-  loadLevel(1);
-  ensureAudio();
+    document.getElementById('posterOverlay').classList.remove('show');
+    loadLevel(1);
+    ensureAudio();
 });
 
 document.getElementById('posterShare').addEventListener('click', async () => {
-  const img = document.getElementById('posterImg');
-  try {
-    const resp = await fetch(img.src);
-    const blob = await resp.blob();
-    const file = new File([blob], 'shape-snake-fail.png', { type: 'image/png' });
-    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: '拼形蛇', text: '我挑战了拼形蛇第2关，就差一点！' });
-    } else {
-      const a = document.createElement('a');
-      a.href = img.src; a.download = 'shape-snake-fail.png'; a.click();
+    const img = document.getElementById('posterImg');
+    try {
+        const resp = await fetch(img.src);
+        const blob = await resp.blob();
+        const file = new File([blob], 'shape-snake-fail.png', { type: 'image/png' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: '拼形蛇', text: '我挑战了拼形蛇第2关，就差一点！' });
+        } else {
+            const a = document.createElement('a');
+            a.href = img.src; a.download = 'shape-snake-fail.png'; a.click();
+        }
+    } catch (_) {
+        const a = document.createElement('a');
+        a.href = img.src; a.download = 'shape-snake-fail.png'; a.click();
     }
-  } catch (_) {
-    const a = document.createElement('a');
-    a.href = img.src; a.download = 'shape-snake-fail.png'; a.click();
-  }
 });
 
 // ========== 游戏逻辑 ==========
 function loadLevel(index) {
-  clearInterval(timerInterval);
-  if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
-  currentLevel = index;
-  const level = LEVELS[index];
-  GRID = level.grid; CELL = Math.floor(420 / level.grid); COLS = GRID; ROWS = GRID;
-  LOGICAL_W = GRID * CELL; LOGICAL_H = GRID * CELL;
-  const dpr = window.devicePixelRatio || 1;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  canvas.width = LOGICAL_W * dpr; canvas.height = LOGICAL_H * dpr;
-  ctx.scale(dpr, dpr);
+    clearInterval(timerInterval);
+    if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
+    currentLevel = index;
+    const level = LEVELS[index];
+    GRID = level.grid; CELL = Math.floor(420 / level.grid); COLS = GRID; ROWS = GRID;
+    LOGICAL_W = GRID * CELL; LOGICAL_H = GRID * CELL;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    canvas.width = LOGICAL_W * dpr; canvas.height = LOGICAL_H * dpr;
+    ctx.scale(dpr, dpr);
 
-  TARGET = new Set(level.target.map(([r,c]) => `${c},${r}`));
-  snake = level.snake.map(p => ({...p}));
-  dir = {...level.dir};
-  steps = 0;
-  spitBlocks = new Map();
-  gameOver = false; gameFailed = false;
-  gameStarted = false;
-  lastMoveTime = 0; lastMoveSucceeded = true;
-  lastSpitStep = -1;
+    TARGET = new Set(level.target.map(([r,c]) => `${c},${r}`));
+    snake = level.snake.map(p => ({...p}));
+    dir = {...level.dir};
+    steps = 0;
+    spitBlocks = new Map();
+    gameOver = false; gameFailed = false;
+    gameStarted = false;
+    lastMoveTime = 0; lastMoveSucceeded = true;
+    lastSpitStep = -1;
 
-  // 切换BGM：第2关用紧张版
-  sound.stopBGM();
-  if (audioReady) {
-    if (index >= 1) sound.startBGM2();
-    else sound.startBGM();
-  }
+    sound.stopBGM();
+    if (audioReady) {
+        if (index >= 1) sound.startBGM2();
+        else sound.startBGM();
+    }
 
-  resourceBlocks = new Map();
-  if (level.resources) {
-    const snakeKeys = new Set(snake.map(s => `${s.x},${s.y}`));
-    level.resources.forEach(([r,c]) => {
-      const key = `${c},${r}`;
-      if (!snakeKeys.has(key)) resourceBlocks.set(key, true);
-    });
-  }
+    resourceBlocks = new Map();
+    if (level.resources) {
+        const snakeKeys = new Set(snake.map(s => `${s.x},${s.y}`));
+        level.resources.forEach(([r,c]) => {
+            const key = `${c},${r}`;
+            if (!snakeKeys.has(key)) resourceBlocks.set(key, true);
+        });
+    }
 
-  timeRemaining = level.timeLimit || 0;
-  if (level.timeLimit) {
-    timerInterval = setInterval(() => {
-      if (!gameStarted) return; // 游戏未开始不计时
-      timeRemaining--;
-      updateStats();
-      if (timeRemaining <= 0 && !gameOver && !fx.celebrating) handleFail();
-    }, 1000);
-  }
+    timeRemaining = level.timeLimit || 0;
+    if (level.timeLimit) {
+        timerInterval = setInterval(() => {
+            if (!gameStarted) return;
+            timeRemaining--;
+            updateStats();
+            if (timeRemaining <= 0 && !gameOver && !fx.celebrating) handleFail();
+        }, 1000);
+    }
 
-  fx.trail = []; fx.particles = []; fx.pulses = [];
-  fx.shake = 0; fx.celebrating = false; fx.celebTimer = 0; fx.flashAlpha = 0;
-  document.getElementById('winOverlay').classList.remove('show');
-  document.getElementById('loseOverlay').classList.remove('show');
-  document.getElementById('posterOverlay').classList.remove('show');
+    fx.trail = []; fx.particles = []; fx.pulses = [];
+    fx.shake = 0; fx.celebrating = false; fx.celebTimer = 0; fx.flashAlpha = 0;
+    document.getElementById('winOverlay').classList.remove('show');
+    document.getElementById('loseOverlay').classList.remove('show');
+    document.getElementById('posterOverlay').classList.remove('show');
 
-  document.getElementById('levelLabel').textContent = `第 ${index + 1} 关 · ${level.name}`;
-  updateStats();
-  sound.reset();
+    document.getElementById('levelLabel').textContent = `第${index+1}关·${level.name}`;
+    updateStats();
+    sound.reset();
 }
 
 function updateStats() {
-  const level = LEVELS[currentLevel];
-  document.getElementById('steps').textContent = steps;
-  document.getElementById('stepsMax').textContent = level.maxSteps ? ` / ${level.maxSteps}` : '';
-  document.getElementById('snakeLen').textContent = snake.length;
+    const level = LEVELS[currentLevel];
+    document.getElementById('steps').textContent = steps;
+    document.getElementById('stepsMax').textContent = level.maxSteps ? `/${level.maxSteps}` : '';
+    document.getElementById('snakeLen').textContent = snake.length;
 
-  const stepsBarWrap = document.getElementById('stepsBarWrap');
-  const stepsBarFill = document.getElementById('stepsBarFill');
-  if (level.maxSteps) {
-    stepsBarWrap.classList.add('show');
-    const pct = Math.min(100, (steps / level.maxSteps) * 100);
-    stepsBarFill.style.width = pct + '%';
-  } else {
-    stepsBarWrap.classList.remove('show');
-  }
+    const stepsBarWrap = document.getElementById('stepsBarWrap');
+    const stepsBarFill = document.getElementById('stepsBarFill');
+    if (level.maxSteps) {
+        stepsBarWrap.classList.add('show');
+        const pct = Math.min(100, (steps / level.maxSteps) * 100);
+        stepsBarFill.style.width = pct + '%';
+    } else {
+        stepsBarWrap.classList.remove('show');
+    }
 
-  const td = document.getElementById('timerDisplay');
-  if (level.timeLimit) {
-    td.style.display = '';
-    document.getElementById('timerValue').textContent = timeRemaining;
-    td.className = timeRemaining <= 10 ? 'timer-warn' : '';
-  } else {
-    td.style.display = 'none';
-  }
-  document.getElementById('spitBtn').disabled = gameOver || snake.length <= 1;
+    const td = document.getElementById('timerDisplay');
+    if (level.timeLimit) {
+        td.style.display = '';
+        document.getElementById('timerValue').textContent = timeRemaining;
+        td.className = timeRemaining <= 10 ? 'timer-warn' : '';
+    } else {
+        td.style.display = 'none';
+    }
+    document.getElementById('spitBtn').disabled = gameOver || snake.length <= 1;
 }
 
 function draw() {
-  const t = fx.frame * 0.016;
-  ctx.save();
-  if (fx.shake > 0.3) {
-    const s = fx.shake * 2;
-    ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
-  }
-  ctx.clearRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
-
-  const isInferno = currentLevel >= 1;
-  const breathe = Math.sin(t * 2) * 0.02 + 1;
-  const infernoPulse = isInferno ? Math.sin(t * 2.5) * 0.3 + 0.7 : 0;
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++) {
-      const b = (r + c) % 2 === 0 ? 26 : 22;
-      if (isInferno) {
-        const rv = Math.min(255, (b * 1.5 + 18 * Math.sin(t * 2 + c * 0.4 + r * 0.4) + 10) | 0);
-        const gv = (b * 0.3 * infernoPulse) | 0;
-        ctx.fillStyle = `rgb(${rv},${gv},${(gv * 0.6)|0})`;
-      } else {
-        ctx.fillStyle = `rgb(${b*breathe|0},${b*breathe|0},${(b+8)*breathe|0})`;
-      }
-      ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
-    }
-
-  const pulseAlpha = Math.sin(t * 3) * 0.2 + 0.5;
-  TARGET.forEach(key => {
-    const [cx, cy] = key.split(',').map(Number);
-    const px = cx * CELL, py = cy * CELL;
-    ctx.fillStyle = `rgba(78, 204, 163, ${0.06 + pulseAlpha * 0.08})`;
-    ctx.fillRect(px, py, CELL, CELL);
-    ctx.strokeStyle = `rgba(78, 204, 163, ${pulseAlpha * 0.5})`;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 4]);
-    ctx.strokeRect(px + 0.5, py + 0.5, CELL - 1, CELL - 1);
-    ctx.setLineDash([]);
-  });
-
-  for (const p of fx.pulses) {
-    const r = p.maxR * (1 - p.life);
-    const a = p.life * 0.6;
-    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(78, 204, 163, ${a})`;
-    ctx.lineWidth = 2.5; ctx.stroke();
-    const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
-    g.addColorStop(0, `rgba(78, 204, 163, ${a * 0.3})`);
-    g.addColorStop(1, 'rgba(78,204,163,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
-  }
-
-  fx.trail.forEach((pos, i) => {
-    const a = (i / fx.trail.length) * 0.2;
-    const pad = 6 - (i / fx.trail.length) * 3;
-    ctx.fillStyle = `rgba(233, 69, 96, ${a})`;
-    ctx.fillRect(pos.x * CELL + pad, pos.y * CELL + pad, CELL - pad * 2, CELL - pad * 2);
-  });
-
-  // 金色资源块
-  const goldPulse = Math.sin(t * 4) * 0.2 + 0.8;
-  resourceBlocks.forEach((_, key) => {
-    const [cx, cy] = key.split(',').map(Number);
-    const cx2 = cx * CELL + CELL/2, cy2 = cy * CELL + CELL/2;
+    const t = fx.frame * 0.016;
     ctx.save();
-    ctx.translate(cx2, cy2);
-    ctx.rotate(Math.PI / 4);
-    ctx.shadowColor = '#ffd700';
-    ctx.shadowBlur = 18 * goldPulse;
-    const s = (CELL - 10) / 2 * goldPulse;
-    ctx.fillStyle = '#ffd700';
-    ctx.fillRect(-s, -s, s * 2, s * 2);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.fillRect(-s * 0.3, -s * 0.3, s * 0.8, s * 0.25);
+    if (fx.shake > 0.3) {
+        const s = fx.shake * 2;
+        ctx.translate((Math.random() - 0.5) * s, (Math.random() - 0.5) * s);
+    }
+    ctx.clearRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+
+    const isInferno = currentLevel >= 1;
+    const breathe = Math.sin(t * 2) * 0.02 + 1;
+    const infernoPulse = isInferno ? Math.sin(t * 2.5) * 0.3 + 0.7 : 0;
+    for (let r = 0; r < ROWS; r++)
+        for (let c = 0; c < COLS; c++) {
+            const b = (r + c) % 2 === 0 ? 26 : 22;
+            if (isInferno) {
+                const rv = Math.min(255, (b * 1.5 + 18 * Math.sin(t * 2 + c * 0.4 + r * 0.4) + 10) | 0);
+                const gv = (b * 0.3 * infernoPulse) | 0;
+                ctx.fillStyle = `rgb(${rv},${gv},${(gv * 0.6)|0})`;
+            } else {
+                ctx.fillStyle = `rgb(${b*breathe|0},${b*breathe|0},${(b+8)*breathe|0})`;
+            }
+            ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+        }
+
+    const pulseAlpha = Math.sin(t * 3) * 0.2 + 0.5;
+    TARGET.forEach(key => {
+        const [cx, cy] = key.split(',').map(Number);
+        const px = cx * CELL, py = cy * CELL;
+        ctx.fillStyle = `rgba(78, 204, 163, ${0.06 + pulseAlpha * 0.08})`;
+        ctx.fillRect(px, py, CELL, CELL);
+        ctx.strokeStyle = `rgba(78, 204, 163, ${pulseAlpha * 0.5})`;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
+        ctx.strokeRect(px + 0.5, py + 0.5, CELL - 1, CELL - 1);
+        ctx.setLineDash([]);
+    });
+
+    for (const p of fx.pulses) {
+        const r = p.maxR * (1 - p.life);
+        const a = p.life * 0.6;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(78, 204, 163, ${a})`;
+        ctx.lineWidth = 2.5; ctx.stroke();
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        g.addColorStop(0, `rgba(78, 204, 163, ${a * 0.3})`);
+        g.addColorStop(1, 'rgba(78,204,163,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+    }
+
+    fx.trail.forEach((pos, i) => {
+        const a = (i / fx.trail.length) * 0.2;
+        const pad = 6 - (i / fx.trail.length) * 3;
+        ctx.fillStyle = `rgba(233, 69, 96, ${a})`;
+        ctx.fillRect(pos.x * CELL + pad, pos.y * CELL + pad, CELL - pad * 2, CELL - pad * 2);
+    });
+
+    const goldPulse = Math.sin(t * 4) * 0.2 + 0.8;
+    resourceBlocks.forEach((_, key) => {
+        const [cx, cy] = key.split(',').map(Number);
+        const cx2 = cx * CELL + CELL/2, cy2 = cy * CELL + CELL/2;
+        ctx.save();
+        ctx.translate(cx2, cy2);
+        ctx.rotate(Math.PI / 4);
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 18 * goldPulse;
+        const s = (CELL - 10) / 2 * goldPulse;
+        ctx.fillStyle = '#ffd700';
+        ctx.fillRect(-s, -s, s * 2, s * 2);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillRect(-s * 0.3, -s * 0.3, s * 0.8, s * 0.25);
+        ctx.restore();
+    });
+
+    spitBlocks.forEach((data, key) => {
+        const [cx, cy] = key.split(',').map(Number);
+        const px = cx * CELL, py = cy * CELL;
+        let scale = 1;
+        if (data && data.spitProgress !== undefined && data.spitProgress < 1) {
+            scale = Math.min(1, data.spitProgress);
+            scale = Math.sin(scale * Math.PI * 2) * (1 - scale) * 0.15 + scale;
+        }
+        const cx2 = px + CELL/2, cy2 = py + CELL/2;
+        const hs = (CELL - 8) / 2 * scale;
+        ctx.save();
+        ctx.translate(cx2, cy2);
+        ctx.scale(scale, scale);
+        ctx.fillStyle = '#4ecca3';
+        ctx.shadowColor = '#4ecca3'; ctx.shadowBlur = 12;
+        ctx.fillRect(-hs, -hs, hs * 2, hs * 2);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.fillRect(-hs * 0.5, -hs * 0.5, hs, hs * 0.3);
+        ctx.restore();
+    });
+
+    snake.forEach((seg, i) => {
+        const isHead = i === 0;
+        const pct = snake.length > 1 ? i / (snake.length - 1) : 0;
+        const color = isHead ? '#ff6b6b' : `hsl(0, ${100 - pct * 20}%, ${70 - pct * 30}%)`;
+        ctx.fillStyle = color;
+        ctx.shadowColor = '#e94560';
+        ctx.shadowBlur = isHead ? 14 : 6;
+        const pad = isHead ? 2 : 4;
+        const x = seg.x * CELL + pad, y = seg.y * CELL + pad;
+        const sz = CELL - pad * 2;
+
+        if (isHead) {
+            const r = 5;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y); ctx.lineTo(x + sz - r, y);
+            ctx.quadraticCurveTo(x + sz, y, x + sz, y + r);
+            ctx.lineTo(x + sz, y + sz - r);
+            ctx.quadraticCurveTo(x + sz, y + sz, x + sz - r, y + sz);
+            ctx.lineTo(x + r, y + sz);
+            ctx.quadraticCurveTo(x, y + sz, x, y + sz - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath(); ctx.fill();
+        } else {
+            ctx.fillRect(x, y, sz, sz);
+        }
+        ctx.shadowBlur = 0;
+
+        if (isHead) {
+            ctx.fillStyle = '#fff';
+            const eo = dir.x === 0 ? 0 : dir.x * 3;
+            const eoy = dir.y === 0 ? 0 : dir.y * 3;
+            ctx.beginPath();
+            ctx.arc(seg.x * CELL + 10 + eo, seg.y * CELL + 11 + eoy, 2.5, 0, Math.PI * 2);
+            ctx.arc(seg.x * CELL + 20 + eo, seg.y * CELL + 11 + eoy, 2.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#111';
+            ctx.beginPath();
+            ctx.arc(seg.x * CELL + 10 + eo * 1.5, seg.y * CELL + 11 + eoy * 1.5, 1.2, 0, Math.PI * 2);
+            ctx.arc(seg.x * CELL + 20 + eo * 1.5, seg.y * CELL + 11 + eoy * 1.5, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+
+    TARGET.forEach(key => {
+        const [cx, cy] = key.split(',').map(Number);
+        if (snake.some(s => s.x === cx && s.y === cy) || spitBlocks.has(key)) {
+            ctx.fillStyle = 'rgba(78,204,163,0.7)';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText('✓', cx * CELL + CELL/2, cy * CELL + CELL/2 + 1);
+        }
+    });
+
+    if (fx.flashAlpha > 0) {
+        ctx.fillStyle = `rgba(255,255,255,${fx.flashAlpha})`;
+        ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+    }
+
+    if (isInferno) {
+        const edgeAlpha = 0.08 + Math.sin(t * 2) * 0.04 + 0.04;
+        ctx.strokeStyle = `rgba(233, 69, 96, ${edgeAlpha})`;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(1.5, 1.5, LOGICAL_W - 3, LOGICAL_H - 3);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = `rgba(233, 69, 96, ${edgeAlpha * 0.5})`;
+        ctx.strokeRect(4.5, 4.5, LOGICAL_W - 9, LOGICAL_H - 9);
+
+        const cornerLen = 20;
+        ctx.strokeStyle = `rgba(233, 69, 96, ${edgeAlpha * 0.6})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(0, cornerLen); ctx.lineTo(0, 0); ctx.lineTo(cornerLen, 0); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(LOGICAL_W - cornerLen, 0); ctx.lineTo(LOGICAL_W, 0); ctx.lineTo(LOGICAL_W, cornerLen); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, LOGICAL_H - cornerLen); ctx.lineTo(0, LOGICAL_H); ctx.lineTo(cornerLen, LOGICAL_H); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(LOGICAL_W - cornerLen, LOGICAL_H - cornerLen); ctx.lineTo(LOGICAL_W, LOGICAL_H); ctx.lineTo(LOGICAL_W - cornerLen, LOGICAL_H); ctx.stroke();
+
+        if (timeRemaining > 0 && timeRemaining <= 10) {
+            const urgency = Math.sin(t * 8) * 0.12 + 0.12;
+            const grad = ctx.createRadialGradient(
+                LOGICAL_W/2, LOGICAL_H/2, 0,
+                LOGICAL_W/2, LOGICAL_H/2, LOGICAL_W * 0.7
+            );
+            grad.addColorStop(0, 'rgba(233,69,96,0)');
+            grad.addColorStop(1, `rgba(233,69,96,${urgency})`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+        }
+    }
+
+    if (!gameStarted) {
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 20px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👆 滑动屏幕开始', LOGICAL_W / 2, LOGICAL_H / 2);
+        ctx.font = '14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillText('← 滑动转向  ·  双击吐块 →', LOGICAL_W / 2, LOGICAL_H / 2 + 36);
+    }
+
     ctx.restore();
-  });
-
-  // 吐块
-  spitBlocks.forEach((data, key) => {
-    const [cx, cy] = key.split(',').map(Number);
-    const px = cx * CELL, py = cy * CELL;
-    let scale = 1;
-    if (data && data.spitProgress !== undefined && data.spitProgress < 1) {
-      scale = Math.min(1, data.spitProgress);
-      scale = Math.sin(scale * Math.PI * 2) * (1 - scale) * 0.15 + scale;
-    }
-    const cx2 = px + CELL/2, cy2 = py + CELL/2;
-    const hs = (CELL - 8) / 2 * scale;
-    ctx.save();
-    ctx.translate(cx2, cy2);
-    ctx.scale(scale, scale);
-    ctx.fillStyle = '#4ecca3';
-    ctx.shadowColor = '#4ecca3'; ctx.shadowBlur = 12;
-    ctx.fillRect(-hs, -hs, hs * 2, hs * 2);
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.fillRect(-hs * 0.5, -hs * 0.5, hs, hs * 0.3);
-    ctx.restore();
-  });
-
-  snake.forEach((seg, i) => {
-    const isHead = i === 0;
-    const pct = snake.length > 1 ? i / (snake.length - 1) : 0;
-    const color = isHead ? '#ff6b6b' : `hsl(0, ${100 - pct * 20}%, ${70 - pct * 30}%)`;
-    ctx.fillStyle = color;
-    ctx.shadowColor = '#e94560';
-    ctx.shadowBlur = isHead ? 14 : 6;
-    const pad = isHead ? 2 : 4;
-    const x = seg.x * CELL + pad, y = seg.y * CELL + pad;
-    const sz = CELL - pad * 2;
-
-    if (isHead) {
-      const r = 5;
-      ctx.beginPath();
-      ctx.moveTo(x + r, y); ctx.lineTo(x + sz - r, y);
-      ctx.quadraticCurveTo(x + sz, y, x + sz, y + r);
-      ctx.lineTo(x + sz, y + sz - r);
-      ctx.quadraticCurveTo(x + sz, y + sz, x + sz - r, y + sz);
-      ctx.lineTo(x + r, y + sz);
-      ctx.quadraticCurveTo(x, y + sz, x, y + sz - r);
-      ctx.lineTo(x, y + r);
-      ctx.quadraticCurveTo(x, y, x + r, y);
-      ctx.closePath(); ctx.fill();
-    } else {
-      ctx.fillRect(x, y, sz, sz);
-    }
-    ctx.shadowBlur = 0;
-
-    if (isHead) {
-      ctx.fillStyle = '#fff';
-      const eo = dir.x === 0 ? 0 : dir.x * 3;
-      const eoy = dir.y === 0 ? 0 : dir.y * 3;
-      ctx.beginPath();
-      ctx.arc(seg.x * CELL + 10 + eo, seg.y * CELL + 11 + eoy, 2.5, 0, Math.PI * 2);
-      ctx.arc(seg.x * CELL + 20 + eo, seg.y * CELL + 11 + eoy, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#111';
-      ctx.beginPath();
-      ctx.arc(seg.x * CELL + 10 + eo * 1.5, seg.y * CELL + 11 + eoy * 1.5, 1.2, 0, Math.PI * 2);
-      ctx.arc(seg.x * CELL + 20 + eo * 1.5, seg.y * CELL + 11 + eoy * 1.5, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  });
-
-  TARGET.forEach(key => {
-    const [cx, cy] = key.split(',').map(Number);
-    if (snake.some(s => s.x === cx && s.y === cy) || spitBlocks.has(key)) {
-      ctx.fillStyle = 'rgba(78,204,163,0.7)';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('✓', cx * CELL + CELL/2, cy * CELL + CELL/2 + 1);
-    }
-  });
-
-  if (fx.flashAlpha > 0) {
-    ctx.fillStyle = `rgba(255,255,255,${fx.flashAlpha})`;
-    ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
-  }
-
-  // 第2关：炼狱视觉效果
-  if (isInferno) {
-    // 危险边缘光晕
-    const edgeAlpha = 0.08 + Math.sin(t * 2) * 0.04 + 0.04;
-    ctx.strokeStyle = `rgba(233, 69, 96, ${edgeAlpha})`;
-    ctx.lineWidth = 3;
-    ctx.strokeRect(1.5, 1.5, LOGICAL_W - 3, LOGICAL_H - 3);
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = `rgba(233, 69, 96, ${edgeAlpha * 0.5})`;
-    ctx.strokeRect(4.5, 4.5, LOGICAL_W - 9, LOGICAL_H - 9);
-
-    // 角落装饰
-    const cornerLen = 20;
-    ctx.strokeStyle = `rgba(233, 69, 96, ${edgeAlpha * 0.6})`;
-    ctx.lineWidth = 2;
-    // 左上
-    ctx.beginPath(); ctx.moveTo(0, cornerLen); ctx.lineTo(0, 0); ctx.lineTo(cornerLen, 0); ctx.stroke();
-    // 右上
-    ctx.beginPath(); ctx.moveTo(LOGICAL_W - cornerLen, 0); ctx.lineTo(LOGICAL_W, 0); ctx.lineTo(LOGICAL_W, cornerLen); ctx.stroke();
-    // 左下
-    ctx.beginPath(); ctx.moveTo(0, LOGICAL_H - cornerLen); ctx.lineTo(0, LOGICAL_H); ctx.lineTo(cornerLen, LOGICAL_H); ctx.stroke();
-    // 右下
-    ctx.beginPath(); ctx.moveTo(LOGICAL_W - cornerLen, LOGICAL_H - cornerLen); ctx.lineTo(LOGICAL_W, LOGICAL_H); ctx.lineTo(LOGICAL_W - cornerLen, LOGICAL_H); ctx.stroke();
-
-    // 倒计时 < 10 紧急脉动
-    if (timeRemaining > 0 && timeRemaining <= 10) {
-      const urgency = Math.sin(t * 8) * 0.12 + 0.12;
-      const grad = ctx.createRadialGradient(
-        LOGICAL_W/2, LOGICAL_H/2, 0,
-        LOGICAL_W/2, LOGICAL_H/2, LOGICAL_W * 0.7
-      );
-      grad.addColorStop(0, 'rgba(233,69,96,0)');
-      grad.addColorStop(1, `rgba(233,69,96,${urgency})`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
-    }
-  }
-
-  // 游戏未开始提示
-  if (!gameStarted) {
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 20px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('👆 滑动屏幕开始', LOGICAL_W / 2, LOGICAL_H / 2);
-    ctx.font = '14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.fillText('← 滑动转向  ·  双击吐块 →', LOGICAL_W / 2, LOGICAL_H / 2 + 36);
-  }
-
-  ctx.restore();
 }
 
 // ========== 移动逻辑 ==========
 function tryMove(immediate) {
-  if (gameOver || fx.celebrating || !gameStarted) return;
-  const now = performance.now();
-  if (now - lastMoveTime < (immediate ? 150 : MOVE_INTERVAL)) return;
-  lastMoveTime = now;
+    if (gameOver || fx.celebrating || !gameStarted) return;
+    const now = performance.now();
+    if (now - lastMoveTime < (immediate ? 150 : MOVE_INTERVAL)) return;
+    lastMoveTime = now;
 
-  const head = snake[0];
-  const nx = head.x + dir.x, ny = head.y + dir.y;
+    const head = snake[0];
+    const nx = head.x + dir.x, ny = head.y + dir.y;
 
-  // 撞墙
-  if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
-    if (currentLevel >= 1) { handleFail(); return; }
-    if (lastMoveSucceeded) triggerShake(6);
-    lastMoveSucceeded = false; return;
-  }
-  // 撞自己
-  if (snake.slice(0, -1).some(s => s.x === nx && s.y === ny)) {
-    if (currentLevel >= 1) { handleFail(); return; }
-    if (lastMoveSucceeded) triggerShake(6);
-    lastMoveSucceeded = false; return;
-  }
+    if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
+        if (currentLevel >= 1) { handleFail(); return; }
+        if (lastMoveSucceeded) triggerShake(6);
+        lastMoveSucceeded = false; return;
+    }
+    if (snake.slice(0, -1).some(s => s.x === nx && s.y === ny)) {
+        if (currentLevel >= 1) { handleFail(); return; }
+        if (lastMoveSucceeded) triggerShake(6);
+        lastMoveSucceeded = false; return;
+    }
 
-  lastMoveSucceeded = true;
-  snake.unshift({x: nx, y: ny});
-  sound.click();
+    lastMoveSucceeded = true;
+    snake.unshift({x: nx, y: ny});
+    sound.click();
 
-  const key = `${nx},${ny}`;
-  const recycled = spitBlocks.has(key);
-  if (recycled) spitBlocks.delete(key);
+    const key = `${nx},${ny}`;
+    const recycled = spitBlocks.has(key);
+    if (recycled) spitBlocks.delete(key);
 
-  if (resourceBlocks.has(key)) {
-    // 吃资源：蛇长+1，不pop尾部
-    resourceBlocks.delete(key);
-    sound.collect();
-    triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 8, '#ffd700', { spread: 3 });
-  } else if (!recycled) {
-    // 回收吐块也不pop，蛇长+1
-    snake.pop();
-  }
+    if (resourceBlocks.has(key)) {
+        resourceBlocks.delete(key);
+        sound.collect();
+        triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 8, '#ffd700', { spread: 3 });
+    } else if (!recycled) {
+        snake.pop();
+    }
 
-  steps++;
-  updateStats();
+    steps++;
+    updateStats();
 
-  if (TARGET.has(key)) {
-    triggerPulse(nx, ny);
-    triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 6, '#4ecca3', { spread: 2.5 });
-  }
+    if (TARGET.has(key)) {
+        triggerPulse(nx, ny);
+        triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 6, '#4ecca3', { spread: 2.5 });
+    }
 
-  checkWin();
-  if (!gameOver) checkLose();
+    checkWin();
+    if (!gameOver) checkLose();
 }
 
 function spit() {
-  if (gameOver || fx.celebrating) return;
-  if (snake.length <= 1) return;
-  if (steps === lastSpitStep) return; // 同一移动 tick 内禁止连吐两次
-  lastSpitStep = steps;
-  if (!gameStarted) gameStarted = true;
-  const tail = snake[snake.length - 1];
-  const key = `${tail.x},${tail.y}`;
-  if (spitBlocks.has(key)) return;
-  spitBlocks.set(key, { spitProgress: 0 });
-  snake.pop();
-  steps++;
-  triggerParticles(tail.x * CELL + CELL/2, tail.y * CELL + CELL/2, 4, '#4ecca3', { spread: 2 });
-  updateStats();
-  if (TARGET.has(key)) triggerPulse(tail.x, tail.y);
-  checkWin();
-  if (!gameOver) checkLose();
+    if (gameOver || fx.celebrating) return;
+    if (snake.length <= 1) return;
+    if (steps === lastSpitStep) return;
+    lastSpitStep = steps;
+    if (!gameStarted) gameStarted = true;
+    const tail = snake[snake.length - 1];
+    const key = `${tail.x},${tail.y}`;
+    if (spitBlocks.has(key)) return;
+    spitBlocks.set(key, { spitProgress: 0 });
+    snake.pop();
+    steps++;
+    triggerParticles(tail.x * CELL + CELL/2, tail.y * CELL + CELL/2, 4, '#4ecca3', { spread: 2 });
+    updateStats();
+    if (TARGET.has(key)) triggerPulse(tail.x, tail.y);
+    checkWin();
+    if (!gameOver) checkLose();
 }
 
 function checkWin() {
-  for (const key of TARGET)
-    if (!snake.some(s => `${s.x},${s.y}` === key) && !spitBlocks.has(key)) return;
+    for (const key of TARGET)
+        if (!snake.some(s => `${s.x},${s.y}` === key) && !spitBlocks.has(key)) return;
 
-  const all = new Set();
-  snake.forEach(s => all.add(`${s.x},${s.y}`));
-  spitBlocks.forEach((_, k) => all.add(k));
-  for (const key of all) if (!TARGET.has(key)) return;
+    const all = new Set();
+    snake.forEach(s => all.add(`${s.x},${s.y}`));
+    spitBlocks.forEach((_, k) => all.add(k));
+    for (const key of all) if (!TARGET.has(key)) return;
 
-  gameOver = true; gameFailed = false;
-  triggerCelebration();
+    gameOver = true; gameFailed = false;
+    triggerCelebration();
 }
 
 function checkLose() {
-  const level = LEVELS[currentLevel];
-  if (level.maxSteps && steps >= level.maxSteps) handleFail();
+    const level = LEVELS[currentLevel];
+    if (level.maxSteps && steps >= level.maxSteps) handleFail();
 }
 
 function handleFail() {
-  gameOver = true; gameFailed = true;
-  sound.loseSound(); sound.stopBGM();
-  clearInterval(timerInterval);
-  if (currentLevel >= 1) showPoster();
-  else showLoseScreen();
+    gameOver = true; gameFailed = true;
+    sound.loseSound(); sound.stopBGM();
+    clearInterval(timerInterval);
+    if (currentLevel >= 1) showPoster();
+    else showLoseScreen();
 }
 
 // ========== 渲染循环 ==========
 let lastTime = 0;
 function gameLoop(time) {
-  if (lastTime === 0) lastTime = time;
-  lastTime = time;
+    if (lastTime === 0) lastTime = time;
+    lastTime = time;
 
-  if (spitBlocks) {
-    spitBlocks.forEach((data, key) => {
-      if (data && data.spitProgress !== undefined && data.spitProgress < 1) {
-        data.spitProgress += 0.08;
-        if (data.spitProgress >= 1) spitBlocks.set(key, true);
-      }
-    });
-  }
+    if (spitBlocks) {
+        spitBlocks.forEach((data, key) => {
+            if (data && data.spitProgress !== undefined && data.spitProgress < 1) {
+                data.spitProgress += 0.08;
+                if (data.spitProgress >= 1) spitBlocks.set(key, true);
+            }
+        });
+    }
 
-  if (!gameOver && !fx.celebrating) tryMove(false);
-  updateEffects();
-  draw();
-  requestAnimationFrame(gameLoop);
+    if (!gameOver && !fx.celebrating) tryMove(false);
+    updateEffects();
+    draw();
+    requestAnimationFrame(gameLoop);
 }
 
 // ========== 输入控制 ==========
 document.addEventListener('keydown', e => {
-  switch(e.key) {
-    case 'ArrowUp': case 'w': case 'W': e.preventDefault(); setDirection(0, -1); break;
-    case 'ArrowDown': case 's': case 'S': e.preventDefault(); setDirection(0, 1); break;
-    case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); setDirection(-1, 0); break;
-    case 'ArrowRight': case 'd': case 'D': e.preventDefault(); setDirection(1, 0); break;
-    case ' ': case 'Enter': e.preventDefault(); spit(); break;
-  }
+    switch(e.key) {
+        case 'ArrowUp': case 'w': case 'W': e.preventDefault(); setDirection(0, -1); break;
+        case 'ArrowDown': case 's': case 'S': e.preventDefault(); setDirection(0, 1); break;
+        case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); setDirection(-1, 0); break;
+        case 'ArrowRight': case 'd': case 'D': e.preventDefault(); setDirection(1, 0); break;
+        case ' ': case 'Enter': e.preventDefault(); spit(); break;
+    }
 });
+
+// Shell buttons
 document.getElementById('btnUp').addEventListener('click', () => setDirection(0, -1));
 document.getElementById('btnDown').addEventListener('click', () => setDirection(0, 1));
 document.getElementById('btnLeft').addEventListener('click', () => setDirection(-1, 0));
 document.getElementById('btnRight').addEventListener('click', () => setDirection(1, 0));
+document.getElementById('btnA').addEventListener('click', spit);
+document.getElementById('btnB').addEventListener('click', () => { if (!gameOver) { loadLevel(currentLevel); ensureAudio(); } });
+document.getElementById('btnSelect').addEventListener('click', () => { loadLevel(currentLevel); ensureAudio(); });
+document.getElementById('btnStart').addEventListener('click', () => { loadLevel(currentLevel); ensureAudio(); });
+
+// Hidden spitBtn for disabled-state logic
 document.getElementById('spitBtn').addEventListener('click', spit);
-document.getElementById('resetBtn').addEventListener('click', () => { loadLevel(currentLevel); ensureAudio(); });
 
 let touchStartX = 0, touchStartY = 0, lastTapTime = 0;
 canvas.addEventListener('touchstart', e => {
-  touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
+    touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
 }, {passive: true});
 canvas.addEventListener('touchend', e => {
-  const dx = e.changedTouches[0].clientX - touchStartX;
-  const dy = e.changedTouches[0].clientY - touchStartY;
-  const dist = Math.hypot(dx, dy);
-  if (dist < 15) {
-    const now = Date.now();
-    if (now - lastTapTime < 350) { spit(); lastTapTime = 0; }
-    else lastTapTime = now;
-  } else if (dist > 20) {
-    if (Math.abs(dx) > Math.abs(dy)) setDirection(dx > 0 ? 1 : -1, 0);
-    else setDirection(0, dy > 0 ? 1 : -1);
-  }
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 15) {
+        const now = Date.now();
+        if (now - lastTapTime < 350) { spit(); lastTapTime = 0; }
+        else lastTapTime = now;
+    } else if (dist > 20) {
+        if (Math.abs(dx) > Math.abs(dy)) setDirection(dx > 0 ? 1 : -1, 0);
+        else setDirection(0, dy > 0 ? 1 : -1);
+    }
 }, {passive: true});
 
-// 禁止长按菜单（移动端）
 document.addEventListener('contextmenu', e => { e.preventDefault(); });
 canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
-document.getElementById('spitBtn').addEventListener('contextmenu', e => { e.preventDefault(); });
 
 loadLevel(0);
 requestAnimationFrame(gameLoop);
