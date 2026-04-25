@@ -325,6 +325,7 @@
         .overlay .lose-title { color: #e94560; text-shadow: 0 0 40px rgba(233,69,96,0.5); }
         .overlay .final-title { color: #ffd700; text-shadow: 0 0 50px rgba(255,215,0,0.5); }
         .overlay p { color: #a0a0b0; margin: 4px 0 20px; font-size: 16px; }
+        .overlay .fail-message { color: #ffd700; font-size: 18px; font-weight: bold; margin: 0 0 16px; text-shadow: 0 0 20px rgba(255,215,0,0.3); }
         .overlay .btn-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
         .overlay button {
             min-width: 140px;
@@ -383,6 +384,58 @@
             background: linear-gradient(135deg, #e94560, #ff6b35);
             border: none;
             color: #fff;
+        }
+
+        /* ===== 结算面板 ===== */
+        .settle-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            background: rgba(30,27,36,0.95);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 28px 24px 20px;
+            max-width: 340px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        .settle-badge {
+            font-size: 22px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255,215,0,0.3);
+            padding: 6px 18px;
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 30px;
+            background: rgba(255,215,0,0.06);
+        }
+        .settle-stats {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 12px 0;
+        }
+        .settle-stats .row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+            color: #a0a0b0;
+        }
+        .settle-stats .row .val {
+            color: #fff;
+            font-weight: bold;
+        }
+        .settle-stats .row .val.green { color: #4ecca3; }
+        .settle-stats .row .val.red { color: #e94560; }
+        .settle-message {
+            font-size: 16px;
+            color: #ffd700;
+            font-weight: bold;
+            text-align: center;
+            margin: 4px 0 10px;
+            min-height: 24px;
         }
 
         /* 隐藏的 spitBtn（供 JS disabled 逻辑使用） */
@@ -611,6 +664,7 @@
 <div class="overlay" id="loseOverlay">
     <h2 class="lose-title">GAME OVER</h2>
     <p>游戏结束</p>
+    <p id="loseMessage" class="fail-message"></p>
     <div class="btn-group">
         <button class="btn-retry" id="retryBtn">再来一次</button>
     </div>
@@ -618,11 +672,26 @@
 
 <div class="overlay" id="posterOverlay">
     <div class="poster-wrapper">
-        <img id="posterImg" class="poster-image" alt="挑战失败海报" draggable="false">
+        <img id="posterImg" class="poster-image" alt="挑战海报" draggable="false">
+        <p id="posterMessage" class="fail-message"></p>
         <div class="poster-actions">
             <button class="btn-outline" id="posterRetry">↻ 再来一次</button>
             <button class="btn-gradient" id="posterShare">📤 分享出去</button>
         </div>
+    </div>
+</div>
+
+<div class="overlay" id="settleOverlay">
+    <div class="settle-box">
+        <h2 id="settleTitle" class="win-title">通关!</h2>
+        <div class="settle-badge" id="settleBadge">🔥 炼狱幸存者</div>
+        <div class="settle-stats">
+            <div class="row"><span>完成度</span><span class="val green" id="settleCompletion">0/0 (0%)</span></div>
+            <div class="row"><span>步数</span><span class="val" id="settleSteps">0</span></div>
+            <div class="row"><span>用时</span><span class="val" id="settleTime">--</span></div>
+        </div>
+        <p class="settle-message" id="settleMessage"></p>
+        <div class="btn-group" id="settleButtons"></div>
     </div>
 </div>
 
@@ -656,7 +725,7 @@ const LEVELS = [
         name: '热身',
         grid: 12,
         target: [[6,6],[5,6],[7,6],[6,5],[6,7]],
-        snake: [{x:0,y:6},{x:1,y:6},{x:2,y:6},{x:3,y:6},{x:4,y:6}],
+        snake: [{x:4,y:6},{x:5,y:6},{x:6,y:6},{x:7,y:6},{x:8,y:6}],
         dir: {x:1, y:0},
         maxSteps: 99,
         timeLimit: 0,
@@ -677,22 +746,100 @@ const LEVELS = [
             [9,6],[9,7],[9,8],
             [10,6],[10,7],[10,8],
         ],
-        snake: [{x:0,y:9},{x:1,y:9},{x:2,y:9},{x:3,y:9},{x:4,y:9}],
+        snake: [{x:4,y:9},{x:5,y:9},{x:6,y:9},{x:7,y:9},{x:8,y:9}],
         dir: {x:1, y:0},
         maxSteps: 400,
         timeLimit: 120,
         resources: [
-            // 28个资源块，沿边框分布，避开十字形目标区域
-            [0,0],[0,2],[0,5],[0,8],[0,11],[0,13],
-            [1,0],[1,13],
-            [2,0],[2,13],
-            [3,0],[3,13],
-            [6,0],[6,13],
-            [7,0],[7,13],
-            [8,0],[8,13],
-            [11,0],[11,13],
-            [12,0],[12,13],
-            [13,0],[13,2],[13,5],[13,8],[13,11],[13,13]
+            // 35个资源块，包围十字目标区
+            [3,4],[3,5],[3,6],[3,7],[3,8],[3,9],[3,10],
+            [11,4],[11,5],[11,6],[11,7],[11,8],[11,9],[11,10],
+            [4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],
+            [4,11],[5,11],[6,11],[7,11],[8,11],[9,11],[10,11],
+            [3,3],[3,11],[11,3],[11,11],
+            [2,6],[2,7],[2,8],
+        ],
+    },
+    {
+        name: '宽十字',
+        grid: 14,
+        target: [
+            // 宽十字 36格 — 横臂 rows 6-8 cols 4-11; 纵臂 rows 4-10 cols 7-9
+            [6,4],[6,5],[6,6],[6,7],[6,8],[6,9],[6,10],[6,11],
+            [7,4],[7,5],[7,6],[7,7],[7,8],[7,9],[7,10],[7,11],
+            [8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],[8,11],
+            [4,7],[4,8],[4,9],
+            [5,7],[5,8],[5,9],
+            [9,7],[9,8],[9,9],
+            [10,7],[10,8],[10,9],
+        ],
+        snake: [{x:4,y:7},{x:5,y:7},{x:6,y:7},{x:7,y:7},{x:8,y:7}],
+        dir: {x:1, y:0},
+        maxSteps: 320,
+        timeLimit: 100,
+        resources: [
+            // 36个资源块，包围宽十字目标区
+            [3,5],[3,6],[3,7],[3,8],[3,9],[3,10],
+            [11,5],[11,6],[11,7],[11,8],[11,9],[11,10],
+            [4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],
+            [4,12],[5,12],[6,12],[7,12],[8,12],[9,12],[10,12],
+            [4,6],[5,6],
+            [9,6],[10,6],
+            [4,5],[5,4],[5,5],
+            [9,4],[9,5],[10,5],
+        ],
+    },
+    {
+        name: '矩形',
+        grid: 14,
+        target: (() => {
+            // 实心矩形 45格 — rows 4-8, cols 4-12
+            const arr = [];
+            for (let r = 4; r <= 8; r++)
+                for (let c = 4; c <= 12; c++)
+                    arr.push([r,c]);
+            return arr;
+        })(),
+        snake: [{x:4,y:7},{x:5,y:7},{x:6,y:7},{x:7,y:7},{x:8,y:7}],
+        dir: {x:1, y:0},
+        maxSteps: 280,
+        timeLimit: 80,
+        resources: [
+            // 42个资源块，环绕矩形外围
+            [3,4],[3,5],[3,6],[3,7],[3,8],[3,9],[3,10],[3,11],[3,12],
+            [9,4],[9,5],[9,6],[9,7],[9,8],[9,9],[9,10],[9,11],[9,12],
+            [4,3],[5,3],[6,3],[7,3],[8,3],
+            [4,13],[5,13],[6,13],[7,13],[8,13],
+            [3,3],[3,13],[9,3],[9,13],
+            [2,5],[2,6],[2,7],[2,8],[2,9],
+            [10,5],[10,6],[10,7],[10,8],[10,9],
+        ],
+    },
+    {
+        name: '炼狱矩形',
+        grid: 14,
+        target: (() => {
+            // 实心矩形 56格 — rows 3-9, cols 3-10
+            const arr = [];
+            for (let r = 3; r <= 9; r++)
+                for (let c = 3; c <= 10; c++)
+                    arr.push([r,c]);
+            return arr;
+        })(),
+        snake: [{x:4,y:7},{x:5,y:7},{x:6,y:7},{x:7,y:7},{x:8,y:7}],
+        dir: {x:1, y:0},
+        maxSteps: 260,
+        timeLimit: 60,
+        resources: [
+            // 55个资源块，环绕矩形外围 + 外圈
+            [2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],
+            [10,3],[10,4],[10,5],[10,6],[10,7],[10,8],[10,9],[10,10],
+            [3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],
+            [3,11],[4,11],[5,11],[6,11],[7,11],[8,11],[9,11],
+            [1,4],[1,5],[1,6],[1,7],[1,8],[1,9],
+            [11,4],[11,5],[11,6],[11,7],[11,8],[11,9],
+            [4,1],[5,1],[6,1],[7,1],[8,1],[3,1],
+            [3,12],[4,12],[5,12],[6,12],[7,12],[8,12],[9,12],
         ],
     },
 ];
@@ -925,22 +1072,24 @@ class SoundSynth {
         });
         this._bgmTimer = setTimeout(() => this._scheduleBGM(), 8 * beat * 1000);
     }
-    startBGM2() {
+    startBGM2(speed = 1.0, lowpassFreq = 800) {
         if (this.bgmPlaying || !this.ctx) return;
         this.bgmPlaying = true;
+        this._bgmSpeed = speed;
+        this._bgmLpFreq = lowpassFreq;
         this._scheduleBGM2();
     }
     _scheduleBGM2() {
         if (!this.bgmPlaying || !this.ctx) return;
         const ctx = this.ctx;
-        const tempo = 150;
+        const tempo = 150 * (this._bgmSpeed || 1.0);
         const beat = 60 / tempo;
         const t0 = ctx.currentTime;
         let dest;
         try {
             const filter = ctx.createBiquadFilter();
             filter.type = 'lowpass';
-            filter.frequency.value = 800;
+            filter.frequency.value = this._bgmLpFreq || 800;
             filter.connect(ctx.destination);
             dest = filter;
         } catch (_) { dest = ctx.destination; }
@@ -1003,8 +1152,9 @@ function ensureAudio() {
     sound.unlock();
     if (sound.ctx && !audioReady) {
         audioReady = true;
-        if (currentLevel >= 1) sound.startBGM2();
-        else sound.startBGM();
+        if (currentLevel === 0) sound.startBGM();
+        else if (currentLevel <= 2) sound.startBGM2(1.0, 800);
+        else sound.startBGM2(1.2, 600);
     }
 }
 document.addEventListener('touchstart', ensureAudio, { passive: true });
@@ -1103,8 +1253,10 @@ function updateEffects() {
             fx.celebrating = false;
             if (currentLevel === 0 && LEVELS[currentLevel].stageClear === 'auto')
                 showLevelClear();
+            else if (currentLevel === LEVELS.length - 1)
+                showPoster(true);
             else
-                showWinScreen();
+                showSettleScreen(true);
         }
     }
 
@@ -1154,6 +1306,8 @@ function showWinScreen() {
 }
 
 function showLoseScreen() {
+    const remaining = getRemainingCells();
+    document.getElementById('loseMessage').textContent = getFailMessage(remaining);
     document.getElementById('loseOverlay').classList.add('show');
     sound.loseSound(); sound.stopBGM();
     clearInterval(timerInterval);
@@ -1180,12 +1334,11 @@ function addNoise(pctx, intensity) {
     pctx.putImageData(imgData, 0, 0);
 }
 
-function generatePoster(remaining) {
-    const PW = 375, PH = 500;
+function generatePoster(remaining, won, pct, title) {
+    const PW = 375, PH = 812;
     const dpr = window.devicePixelRatio || 1;
-    const totalTarget = LEVELS[1].target.length;
+    const totalTarget = TARGET.size;
     const filled = totalTarget - remaining;
-    const pct = Math.round((filled / totalTarget) * 100);
     const pc = document.createElement('canvas');
     pc.width = PW * dpr; pc.height = PH * dpr;
     const pctx = pc.getContext('2d');
@@ -1200,8 +1353,8 @@ function generatePoster(remaining) {
     pctx.fillRect(0, 0, PW, PH);
 
     const topGlow = pctx.createRadialGradient(188, 100, 0, 188, 100, 280);
-    topGlow.addColorStop(0, 'rgba(233,69,96,0.12)');
-    topGlow.addColorStop(1, 'rgba(233,69,96,0)');
+    topGlow.addColorStop(0, won ? 'rgba(78,204,163,0.15)' : 'rgba(233,69,96,0.12)');
+    topGlow.addColorStop(1, won ? 'rgba(78,204,163,0)' : 'rgba(233,69,96,0)');
     pctx.fillStyle = topGlow;
     pctx.fillRect(0, 0, PW, PH);
 
@@ -1224,31 +1377,37 @@ function generatePoster(remaining) {
 
     pctx.fillStyle = 'rgba(255,255,255,0.45)';
     pctx.font = `12px ${fontBase}`;
-    pctx.fillText('拼形蛇 · 第二关', PW / 2, 34);
+    pctx.fillText('拼形蛇 · 最终关', PW / 2, 34);
 
-    pctx.fillStyle = '#e94560';
+    pctx.fillStyle = won ? '#4ecca3' : '#e94560';
     pctx.font = `bold 14px ${fontBase}`;
-    pctx.fillText('😵 挑 战 失 败', PW / 2, 60);
+    pctx.fillText(won ? '🎉 通 关 成 功' : '😵 挑 战 失 败', PW / 2, 60);
+
+    // 称号
+    pctx.fillStyle = '#ffd700';
+    pctx.font = `bold 20px ${fontBase}`;
+    pctx.fillText(title, PW / 2, 92);
 
     pctx.save();
-    pctx.translate(PW / 2, 140);
+    pctx.translate(PW / 2, 190);
     pctx.rotate(-0.05);
-    pctx.shadowColor = '#e94560';
+    pctx.shadowColor = won ? '#4ecca3' : '#e94560';
     pctx.shadowBlur = 40;
     pctx.fillStyle = '#ffffff';
-    pctx.font = `bold 60px ${fontBase}`;
+    pctx.font = `bold 64px ${fontBase}`;
     pctx.strokeStyle = '#000';
     pctx.lineWidth = 10;
-    pctx.strokeText('别笑', 0, 0);
+    pctx.strokeText(won ? '通关！' : '别笑', 0, 0);
     pctx.shadowBlur = 0;
-    pctx.fillText('别笑', 0, 0);
+    pctx.fillText(won ? '通关！' : '别笑', 0, 0);
     pctx.restore();
 
-    pctx.fillStyle = '#ff4466';
+    pctx.fillStyle = won ? '#4ecca3' : '#ff4466';
     pctx.font = `bold 17px ${fontBase}`;
-    pctx.fillText('「你也过不了第二关」', PW / 2, 208);
+    const subtitle = won ? `完成度 ${filled}/${totalTarget} · ${pct}%` : '「你也过不了最终关」';
+    pctx.fillText(subtitle, PW / 2, 270);
 
-    const ringCX = PW / 2, ringCY = 280, ringR = 42;
+    const ringCX = PW / 2, ringCY = 350, ringR = 56;
     pctx.beginPath();
     pctx.arc(ringCX, ringCY, ringR, 0, Math.PI * 2);
     pctx.strokeStyle = 'rgba(255,255,255,0.08)';
@@ -1268,7 +1427,7 @@ function generatePoster(remaining) {
     pctx.font = `11px ${fontBase}`;
     pctx.fillText('完成度', ringCX, ringCY + 26);
 
-    const cardX = 28, cardY = 340, cardW = 319, cardH = 72;
+    const cardX = 28, cardY = 430, cardW = 319, cardH = 72;
     pctx.save();
     pctx.shadowColor = 'rgba(233,69,96,0.15)';
     pctx.shadowBlur = 24;
@@ -1312,8 +1471,8 @@ function generatePoster(remaining) {
     pctx.strokeStyle = 'rgba(255,255,255,0.05)';
     pctx.lineWidth = 1;
     pctx.beginPath();
-    pctx.moveTo(50, 478);
-    pctx.lineTo(PW - 50, 478);
+    pctx.moveTo(50, 730);
+    pctx.lineTo(PW - 50, 730);
     pctx.stroke();
 
     return pc;
@@ -1328,18 +1487,95 @@ function getRemainingCells() {
     return count;
 }
 
-function showPoster() {
+function getFailMessage(remaining) {
+    const total = TARGET.size;
+    const filled = total - remaining;
+    if (remaining <= 0) return '';
+    if (remaining <= 3) return `仅差 ${remaining} 格！再来一次必过 (${filled}/${total})`;
+    if (remaining <= 10) return `差 ${remaining} 格，已经很近了 (${filled}/${total})`;
+    if (remaining <= 30) return `还差 ${remaining} 格，继续挑战 (${filled}/${total})`;
+    return `还剩 ${remaining} 格，路还很长 (${filled}/${total})`;
+}
+
+function getTitle(pct) {
+    if (pct >= 100) return '🔥 炼狱幸存者';
+    if (pct >= 86) return '👑 蛇王';
+    if (pct >= 61) return '🐲 毒蛇';
+    if (pct >= 31) return '🐍 挣扎蛇';
+    return '🐣 菜蛇';
+}
+
+function showSettleScreen(won) {
     clearInterval(timerInterval);
     sound.stopBGM();
-    const remaining = getRemainingCells();
-    const pc = generatePoster(remaining);
+    const remaining = won ? 0 : getRemainingCells();
+    const total = TARGET.size;
+    const filled = total - remaining;
+    const pct = Math.round((filled / total) * 100);
+    const level = LEVELS[currentLevel];
+    const timeUsed = level.timeLimit ? level.timeLimit - timeRemaining : 0;
+    const title = getTitle(pct);
+
+    document.getElementById('settleTitle').textContent = won ? '🎉 通关！' : '😵 挑战失败';
+    document.getElementById('settleTitle').className = won ? 'win-title' : 'lose-title';
+    document.getElementById('settleBadge').textContent = title;
+    document.getElementById('settleCompletion').textContent = `${filled}/${total} (${pct}%)`;
+    document.getElementById('settleSteps').textContent = `${steps}${level.maxSteps ? ` / ${level.maxSteps}` : ''}`;
+    document.getElementById('settleTime').textContent = level.timeLimit ? `${timeUsed}s / ${level.timeLimit}s` : '--';
+
+    const msgEl = document.getElementById('settleMessage');
+    if (won) {
+        const remainSteps = level.maxSteps ? level.maxSteps - steps : 0;
+        const stepMsg = remainSteps > 0 ? `剩余步数 ${remainSteps} · ` : '';
+        msgEl.textContent = `${stepMsg}${pct === 100 ? '完美通关！' : '干得漂亮！'}`;
+    } else {
+        msgEl.textContent = getFailMessage(remaining);
+    }
+
+    const btns = document.getElementById('settleButtons');
+    if (won && currentLevel < LEVELS.length - 1) {
+        btns.innerHTML = `<button class="btn-next" id="settleNextBtn">下一关 →</button> <button class="btn-home" id="settleRestartBtn">重来</button>`;
+    } else {
+        btns.innerHTML = `<button class="btn-retry" id="settleRetryBtn">重试</button>`;
+    }
+
+    document.getElementById('settleOverlay').classList.add('show');
+
+    document.getElementById('settleNextBtn')?.addEventListener('click', () => {
+        document.getElementById('settleOverlay').classList.remove('show');
+        loadLevel(currentLevel + 1);
+        ensureAudio();
+    }, { once: true });
+
+    document.getElementById('settleRestartBtn')?.addEventListener('click', () => {
+        document.getElementById('settleOverlay').classList.remove('show');
+        loadLevel(currentLevel);
+        ensureAudio();
+    }, { once: true });
+
+    document.getElementById('settleRetryBtn')?.addEventListener('click', () => {
+        document.getElementById('settleOverlay').classList.remove('show');
+        loadLevel(currentLevel);
+        ensureAudio();
+    }, { once: true });
+}
+
+function showPoster(won) {
+    clearInterval(timerInterval);
+    sound.stopBGM();
+    const remaining = won ? 0 : getRemainingCells();
+    const total = TARGET.size;
+    const filled = total - remaining;
+    const pct = Math.round((filled / total) * 100);
+    const pc = generatePoster(remaining, won, pct, getTitle(pct));
     document.getElementById('posterImg').src = pc.toDataURL('image/png');
+    document.getElementById('posterMessage').textContent = won ? '' : getFailMessage(remaining);
     document.getElementById('posterOverlay').classList.add('show');
 }
 
 document.getElementById('posterRetry').addEventListener('click', () => {
     document.getElementById('posterOverlay').classList.remove('show');
-    loadLevel(1);
+    loadLevel(currentLevel);
     ensureAudio();
 });
 
@@ -1350,7 +1586,7 @@ document.getElementById('posterShare').addEventListener('click', async () => {
         const blob = await resp.blob();
         const file = new File([blob], 'shape-snake-fail.png', { type: 'image/png' });
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: '拼形蛇', text: '我挑战了拼形蛇第2关，就差一点！' });
+            await navigator.share({ files: [file], title: '拼形蛇', text: '我挑战了拼形蛇第5关！' });
         } else {
             const a = document.createElement('a');
             a.href = img.src; a.download = 'shape-snake-fail.png'; a.click();
@@ -1386,8 +1622,9 @@ function loadLevel(index) {
 
     sound.stopBGM();
     if (audioReady) {
-        if (index >= 1) sound.startBGM2();
-        else sound.startBGM();
+        if (index === 0) sound.startBGM();
+        else if (index <= 2) sound.startBGM2(1.0, 800);
+        else sound.startBGM2(1.2, 600);
     }
 
     resourceBlocks = new Map();
@@ -1414,6 +1651,7 @@ function loadLevel(index) {
     document.getElementById('winOverlay').classList.remove('show');
     document.getElementById('loseOverlay').classList.remove('show');
     document.getElementById('posterOverlay').classList.remove('show');
+    document.getElementById('settleOverlay').classList.remove('show');
 
     document.getElementById('levelLabel').textContent = `第${index+1}关·${level.name}`;
     updateStats();
@@ -1740,8 +1978,9 @@ function handleFail() {
     gameOver = true; gameFailed = true;
     sound.loseSound(); sound.stopBGM();
     clearInterval(timerInterval);
-    if (currentLevel >= 1) showPoster();
-    else showLoseScreen();
+    if (currentLevel === 0) showLoseScreen();
+    else if (currentLevel === LEVELS.length - 1) showPoster(false);
+    else showSettleScreen(false);
 }
 
 // ========== 渲染循环 ==========
