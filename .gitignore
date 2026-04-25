@@ -1,0 +1,10 @@
+# 依赖包（这个最重要，体积大且不需要提交）
+node_modules/
+
+# 打包生成的目录
+dist/
+dist-ssr/
+
+# 系统生成的文件
+.DS_Store
+*.local
