@@ -25,7 +25,7 @@
         /* ===== 掌机外壳 ===== */
         .pocket-shell {
             width: 100%;
-            max-width: 420px;
+            max-width: 480px;
             background: #2a2332;
             border-radius: 24px 24px 32px 32px;
             padding: 24px 20px 32px;
@@ -131,22 +131,36 @@
             text-align: center;
         }
         .screen-stats .num.warn { color: #e94560; }
-        .screen-stats .steps-bar-wrap {
+        .screen-stats .snake-bar-wrap {
             display: none;
             width: 100%;
-            height: 2px;
-            background: rgba(255,255,255,0.06);
-            border-radius: 1px;
-            overflow: hidden;
-            margin: 2px 0;
+            margin: 3px 0 0;
         }
-        .screen-stats .steps-bar-wrap.show { display: block; }
-        .screen-stats .steps-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #4ecca3, #e94560);
-            border-radius: 1px;
-            transition: width 0.3s;
+        .screen-stats .snake-bar-wrap.show { display: block; }
+        .snake-segments {
+            display: flex;
+            gap: 2px;
+            align-items: center;
+            height: 10px;
         }
+        .snake-seg {
+            flex: 1;
+            height: 8px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.08);
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .snake-seg.filled { background: #00ff88; box-shadow: 0 0 4px rgba(0,255,136,0.5); }
+        .snake-seg.warn {
+            background: #ff0044;
+            box-shadow: 0 0 6px rgba(255,0,68,0.6);
+            animation: segWarnPulse 0.4s ease-in-out infinite alternate;
+        }
+        @keyframes segWarnPulse {
+            from { box-shadow: 0 0 4px rgba(255,0,68,0.4); }
+            to { box-shadow: 0 0 12px rgba(255,0,68,0.9); transform: scaleY(1.4); }
+        }
+        .snake-pct { font-size: 9px; color: rgba(255,255,255,0.3); text-align: right; margin-top: 1px; }
         .timer-warn .num { color: #e94560; animation: timerPulse 0.5s ease-in-out infinite alternate; }
         @keyframes timerPulse { from { opacity: 1; } to { opacity: 0.4; } }
 
@@ -159,6 +173,46 @@
             display: block;
             image-rendering: pixelated;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* ===== 开始按钮覆盖层 ===== */
+        .start-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            border-radius: 6px;
+            z-index: 5;
+            transition: opacity 0.3s;
+        }
+        .start-overlay.hidden { opacity: 0; pointer-events: none; }
+        .start-btn {
+            padding: 12px 40px;
+            background: #e94560;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #c0392b, 0 6px 16px rgba(0,0,0,0.4);
+            transition: transform 0.05s, box-shadow 0.05s;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        .start-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #c0392b, inset 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .start-hint {
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            font-family: 'PingFang SC','Microsoft YaHei',Arial,sans-serif;
         }
 
         /* ===== 控制区 ===== */
@@ -254,33 +308,6 @@
         }
         .btn-b .circle { background: #5a9aff; box-shadow: 0 4px 0 #4477cc, 0 6px 12px rgba(0,0,0,0.4), inset 0 -4px 8px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.3); }
         .btn-b .circle:active { box-shadow: 0 0 0 #4477cc, inset 0 2px 8px rgba(0,0,0,0.4); }
-
-        .bottom-controls {
-            display: flex;
-            justify-content: center;
-            gap: 24px;
-            margin-top: 24px;
-        }
-        .btn-pill {
-            width: 64px; height: 16px;
-            background: #3a3544;
-            border-radius: 8px;
-            box-shadow: 0 3px 0 #221f29, inset 0 1px 0 rgba(255,255,255,0.1);
-            cursor: pointer;
-            transition: transform 0.05s;
-            touch-action: manipulation;
-        }
-        .btn-pill:active { transform: translateY(3px); box-shadow: 0 0 0 #221f29; }
-        .bottom-labels {
-            display: flex;
-            justify-content: center;
-            gap: 48px;
-            margin-top: 6px;
-            color: #6a5a7a;
-            font-size: 9px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
 
         .speaker {
             position: absolute;
@@ -607,12 +634,17 @@
             <div id="levelLabel" style="color:rgba(255,255,255,0.35);font-size:9px">第1关·热身</div>
         </div>
         <div class="screen-stats" style="margin-top:-2px;margin-bottom:2px;padding:0">
-            <div class="steps-bar-wrap" id="stepsBarWrap" style="margin:0">
-                <div class="steps-bar-fill" id="stepsBarFill" style="width:0%"></div>
+            <div class="snake-bar-wrap" id="snakeBarWrap" style="margin:0">
+                <div class="snake-segments" id="snakeSegments"></div>
+                <div class="snake-pct" id="snakePct">0%</div>
             </div>
         </div>
 
         <canvas id="gameCanvas"></canvas>
+        <div class="start-overlay" id="startOverlay">
+            <div class="start-btn" id="startBtn">开始游戏</div>
+            <div class="start-hint">滑动屏幕转向 · 双击吐块 · 方向键也可以点哦~</div>
+        </div>
     </div>
 
     <div class="controls-area">
@@ -627,22 +659,13 @@
         <div class="action-buttons">
             <div class="btn-ab btn-b" id="btnB">
                 <div class="circle"></div>
-                <div class="label">重置</div>
+                <div class="label">暂停</div>
             </div>
             <div class="btn-ab" id="btnA">
                 <div class="circle"></div>
                 <div class="label">吐</div>
             </div>
         </div>
-    </div>
-
-    <div class="bottom-controls">
-        <div class="btn-pill" id="btnSelect"></div>
-        <div class="btn-pill" id="btnStart"></div>
-    </div>
-    <div class="bottom-labels">
-        <span>SELECT</span>
-        <span>START</span>
     </div>
 
     <div class="speaker">
@@ -740,7 +763,7 @@ const LEVELS = [
         name: '热身',
         grid: 12,
         target: [[6,6],[5,6],[7,6],[6,5],[6,7]],
-        snake: [{x:4,y:6},{x:5,y:6},{x:6,y:6},{x:7,y:6},{x:8,y:6}],
+        snake: [{x:8,y:6},{x:7,y:6},{x:6,y:6},{x:5,y:6},{x:4,y:6}],
         dir: {x:1, y:0},
         maxSteps: 99,
         timeLimit: 0,
@@ -761,7 +784,7 @@ const LEVELS = [
             [9,6],[9,7],[9,8],
             [10,6],[10,7],[10,8],
         ],
-        snake: [{x:4,y:9},{x:5,y:9},{x:6,y:9},{x:7,y:9},{x:8,y:9}],
+        snake: [{x:8,y:9},{x:7,y:9},{x:6,y:9},{x:5,y:9},{x:4,y:9}],
         dir: {x:1, y:0},
         maxSteps: 400,
         timeLimit: 120,
@@ -781,7 +804,7 @@ const LEVELS = [
             [10,6],[10,7],[10,8],
             [11,6],[11,7],[11,8],
         ],
-        snake: [{x:4,y:7},{x:5,y:7},{x:6,y:7},{x:7,y:7},{x:8,y:7}],
+        snake: [{x:8,y:7},{x:7,y:7},{x:6,y:7},{x:5,y:7},{x:4,y:7}],
         dir: {x:1, y:0},
         maxSteps: 320,
         timeLimit: 100,
@@ -798,7 +821,7 @@ const LEVELS = [
                     arr.push([r,c]);
             return arr;
         })(),
-        snake: [{x:4,y:7},{x:5,y:7},{x:6,y:7},{x:7,y:7},{x:8,y:7}],
+        snake: [{x:8,y:7},{x:7,y:7},{x:6,y:7},{x:5,y:7},{x:4,y:7}],
         dir: {x:1, y:0},
         maxSteps: 280,
         timeLimit: 80,
@@ -815,7 +838,7 @@ const LEVELS = [
                     arr.push([r,c]);
             return arr;
         })(),
-        snake: [{x:4,y:7},{x:5,y:7},{x:6,y:7},{x:7,y:7},{x:8,y:7}],
+        snake: [{x:8,y:7},{x:7,y:7},{x:6,y:7},{x:5,y:7},{x:4,y:7}],
         dir: {x:1, y:0},
         maxSteps: 260,
         timeLimit: 60,
@@ -824,7 +847,7 @@ const LEVELS = [
 ];
 
 let TARGET = new Set();
-let snake, dir, steps, spitBlocks, gameOver, gameFailed;
+let snake, dir, steps, spitBlocks, gameOver, gameFailed, gamePaused;
 let gameStarted = false;
 let currentLevel = 0;
 let resourceBlocks = new Map();
@@ -1004,6 +1027,25 @@ class SoundSynth {
             });
         } catch (_) {}
     }
+    playHeartbeat(fast) {
+        if (!this.ctx) return;
+        try {
+            const interval = fast ? 0.5 : 1.0;
+            const t = this.ctx.currentTime;
+            [0, interval].forEach(offset => {
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(40, t + offset);
+                gain.gain.setValueAtTime(0.15, t + offset);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.22);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t + offset);
+                osc.stop(t + offset + 0.25);
+            });
+        } catch (_) {}
+    }
     startBGM() {
         if (this.bgmPlaying || !this.ctx) return;
         this.bgmPlaying = true;
@@ -1130,6 +1172,16 @@ class SoundSynth {
 const sound = new SoundSynth();
 let audioReady = false;
 
+// 初始化蛇形进度条 20 节
+(function() {
+    const container = document.getElementById('snakeSegments');
+    for (let i = 0; i < 20; i++) {
+        const seg = document.createElement('div');
+        seg.className = 'snake-seg';
+        container.appendChild(seg);
+    }
+})();
+
 function ensureAudio() {
     sound.unlock();
     if (sound.ctx && !audioReady) {
@@ -1158,11 +1210,11 @@ const DIR_STR = {'0,-1':'UP','0,1':'DOWN','-1,0':'LEFT','1,0':'RIGHT'};
 const OPPOSITE = { UP:'DOWN', DOWN:'UP', LEFT:'RIGHT', RIGHT:'LEFT' };
 
 function setDirection(dx, dy) {
-    if (gameOver || fx.celebrating) return;
+    if (gameOver || gamePaused || fx.celebrating) return;
     const newKey = `${dx},${dy}`;
     const curKey = `${dir.x},${dir.y}`;
     if (OPPOSITE[DIR_STR[newKey]] === DIR_STR[curKey]) return;
-    if (!gameStarted) gameStarted = true;
+    if (!gameStarted) { gameStarted = true; document.getElementById('startOverlay').classList.add('hidden'); }
     dir = {x: dx, y: dy};
     sound.glissando();
     tryMove(true);
@@ -1286,10 +1338,10 @@ function showWinScreen() {
         document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel + 1); ensureAudio();
     }, { once: true });
     document.getElementById('winRestartBtn')?.addEventListener('click', () => {
-        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel); ensureAudio();
+        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel, true); ensureAudio();
     }, { once: true });
     document.getElementById('finalRestartBtn')?.addEventListener('click', () => {
-        document.getElementById('winOverlay').classList.remove('show'); loadLevel(0); ensureAudio();
+        document.getElementById('winOverlay').classList.remove('show'); loadLevel(0, true); ensureAudio();
     }, { once: true });
 }
 
@@ -1303,7 +1355,7 @@ function showLoseScreen() {
 
 document.getElementById('retryBtn').addEventListener('click', () => {
     document.getElementById('loseOverlay').classList.remove('show');
-    loadLevel(currentLevel); ensureAudio();
+    loadLevel(currentLevel, true); ensureAudio();
 });
 
 // ========== 第2关结束海报 ==========
@@ -1548,13 +1600,13 @@ function showSettleScreen(won) {
 
     document.getElementById('settleRestartBtn')?.addEventListener('click', () => {
         document.getElementById('settleOverlay').classList.remove('show');
-        loadLevel(currentLevel);
+        loadLevel(currentLevel, true);
         ensureAudio();
     }, { once: true });
 
     document.getElementById('settleRetryBtn')?.addEventListener('click', () => {
         document.getElementById('settleOverlay').classList.remove('show');
-        loadLevel(currentLevel);
+        loadLevel(currentLevel, true);
         ensureAudio();
     }, { once: true });
 }
@@ -1574,7 +1626,7 @@ function showPoster(won) {
 
 document.getElementById('posterRetry').addEventListener('click', () => {
     document.getElementById('posterOverlay').classList.remove('show');
-    loadLevel(currentLevel);
+    loadLevel(currentLevel, true);
     ensureAudio();
 });
 
@@ -1609,7 +1661,7 @@ document.querySelectorAll('.lv-btn').forEach(btn => {
             document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'));
             clearInterval(timerInterval);
             if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
-            loadLevel(idx);
+            loadLevel(idx, true);
             ensureAudio();
         }
     });
@@ -1655,12 +1707,12 @@ function generateResources(level) {
 }
 
 // ========== 游戏逻辑 ==========
-function loadLevel(index) {
+function loadLevel(index, showStart) {
     clearInterval(timerInterval);
     if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
     currentLevel = index;
     const level = LEVELS[index];
-    GRID = level.grid; CELL = Math.floor(420 / level.grid); COLS = GRID; ROWS = GRID;
+    GRID = level.grid; CELL = Math.floor(480 / level.grid); COLS = GRID; ROWS = GRID;
     LOGICAL_W = GRID * CELL; LOGICAL_H = GRID * CELL;
     const dpr = window.devicePixelRatio || 1;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1673,9 +1725,11 @@ function loadLevel(index) {
     steps = 0;
     spitBlocks = new Map();
     gameOver = false; gameFailed = false;
-    gameStarted = false;
+    gameStarted = false; gamePaused = false;
+    document.getElementById('startOverlay').classList.toggle('hidden', !showStart);
     lastMoveTime = 0; lastMoveSucceeded = true;
     lastSpitStep = -1;
+    lastHeartbeatTime = 0;
 
     sound.stopBGM();
     if (audioReady) {
@@ -1724,14 +1778,19 @@ function updateStats() {
     document.getElementById('stepsMax').textContent = level.maxSteps ? `/${level.maxSteps}` : '';
     document.getElementById('snakeLen').textContent = snake.length;
 
-    const stepsBarWrap = document.getElementById('stepsBarWrap');
-    const stepsBarFill = document.getElementById('stepsBarFill');
+    const snakeWrap = document.getElementById('snakeBarWrap');
     if (level.maxSteps) {
-        stepsBarWrap.classList.add('show');
+        snakeWrap.classList.add('show');
         const pct = Math.min(100, (steps / level.maxSteps) * 100);
-        stepsBarFill.style.width = pct + '%';
+        const filled = Math.round((pct / 100) * 20);
+        const segs = document.getElementById('snakeSegments').children;
+        for (let i = 0; i < 20; i++) {
+            segs[i].className = 'snake-seg';
+            if (i < filled) segs[i].classList.add(i >= 18 ? 'warn' : 'filled');
+        }
+        document.getElementById('snakePct').textContent = Math.round(pct) + '%';
     } else {
-        stepsBarWrap.classList.remove('show');
+        snakeWrap.classList.remove('show');
     }
 
     const td = document.getElementById('timerDisplay');
@@ -1843,6 +1902,10 @@ function draw() {
         ctx.restore();
     });
 
+    const isNearDeath = currentLevel >= 1 && gameStarted && !gameOver && (
+        (LEVELS[currentLevel].maxSteps && LEVELS[currentLevel].maxSteps - steps <= 10) ||
+        (LEVELS[currentLevel].timeLimit && timeRemaining <= 10)
+    );
     snake.forEach((seg, i) => {
         const isHead = i === 0;
         const pct = snake.length > 1 ? i / (snake.length - 1) : 0;
@@ -1886,7 +1949,6 @@ function draw() {
             ctx.fill();
         }
     });
-
     TARGET.forEach(key => {
         const [cx, cy] = key.split(',').map(Number);
         if (snake.some(s => s.x === cx && s.y === cy) || spitBlocks.has(key)) {
@@ -1932,17 +1994,75 @@ function draw() {
         }
     }
 
+    // 濒死滤镜：去饱和红黑层 + 血红色脉动目标格 + 径向边缘 + 全局闪烁 + 微震动
+    if (isNearDeath && gameStarted && !gameOver) {
+        // 去饱和偏红半透明层
+        ctx.fillStyle = 'rgba(10,0,0,0.55)';
+        ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+
+        // 血红色脉动未填充目标格（200ms 周期）
+        const bloodT = Math.sin(Date.now() / 200 * Math.PI);
+        const bloodAlpha = bloodT * 0.2 + 0.8;
+        TARGET.forEach(key => {
+            if (snake.some(s => `${s.x},${s.y}` === key) || spitBlocks.has(key)) return;
+            const [cx, cy] = key.split(',').map(Number);
+            ctx.save();
+            ctx.shadowColor = '#ff0044';
+            ctx.shadowBlur = 15 + bloodT * 10 + 10;
+            ctx.fillStyle = `rgba(255, 0, 68, ${bloodAlpha * 0.4 + 0.6})`;
+            ctx.fillRect(cx * CELL, cy * CELL, CELL, CELL);
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(cx * CELL + 1, cy * CELL + 1, CELL - 2, CELL - 2);
+            ctx.restore();
+        });
+
+        // 径向渐变：中心透明 → 边缘血红
+        const edgeUrgency = Math.sin(t * 3) * 0.15 + 0.35;
+        const grad = ctx.createRadialGradient(
+            LOGICAL_W / 2, LOGICAL_H / 2, LOGICAL_W * 0.15,
+            LOGICAL_W / 2, LOGICAL_H / 2, LOGICAL_W * 0.55
+        );
+        grad.addColorStop(0, 'rgba(255,0,68,0)');
+        grad.addColorStop(1, `rgba(255,0,68,${edgeUrgency})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+
+        // 最外层红色粗边框脉动 8~16px
+        const borderWidth = 8 + Math.sin(t * 3) * 4;
+        ctx.strokeStyle = `rgba(255, 0, 68, ${Math.sin(t * 4) * 0.3 + 0.7})`;
+        ctx.lineWidth = borderWidth;
+        ctx.strokeRect(borderWidth / 2, borderWidth / 2, LOGICAL_W - borderWidth, LOGICAL_H - borderWidth);
+
+        // 全局闪烁 rgba(255,0,68,0.15) 周期 300ms
+        if (Math.floor(Date.now() / 300) % 2 === 0) {
+            ctx.fillStyle = 'rgba(255,0,68,0.15)';
+            ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+        }
+
+        // 屏幕微震动
+        canvas.style.transform = `translate(${(Math.random() - 0.5) * 3}px, ${(Math.random() - 0.5) * 3}px)`;
+    } else if (!isNearDeath) {
+        canvas.style.transform = '';
+        ctx.shadowBlur = 0;
+    }
+
     if (!gameStarted) {
         ctx.fillStyle = 'rgba(0,0,0,0.35)';
         ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+    }
+
+    if (gamePaused && gameStarted) {
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 20px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('👆 滑动屏幕开始', LOGICAL_W / 2, LOGICAL_H / 2);
+        ctx.font = 'bold 36px "Courier New",monospace';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('⏸', LOGICAL_W / 2, LOGICAL_H / 2);
         ctx.font = '14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.fillText('← 滑动转向  ·  双击吐块 →', LOGICAL_W / 2, LOGICAL_H / 2 + 36);
+        ctx.fillText('已暂停 · 点击继续', LOGICAL_W / 2, LOGICAL_H / 2 + 36);
     }
 
     ctx.restore();
@@ -1999,11 +2119,11 @@ function tryMove(immediate) {
 }
 
 function spit() {
-    if (gameOver || fx.celebrating) return;
+    if (gameOver || gamePaused || fx.celebrating) return;
     if (snake.length <= 1) return;
     if (steps === lastSpitStep) return;
     lastSpitStep = steps;
-    if (!gameStarted) gameStarted = true;
+    if (!gameStarted) { gameStarted = true; document.getElementById('startOverlay').classList.add('hidden'); }
 
     const tail = snake[snake.length - 1];
     const tailKey = `${tail.x},${tail.y}`;
@@ -2081,6 +2201,7 @@ function handleFail() {
 
 // ========== 渲染循环 ==========
 let lastTime = 0;
+let lastHeartbeatTime = 0;
 function gameLoop(time) {
     if (lastTime === 0) lastTime = time;
     lastTime = time;
@@ -2094,7 +2215,21 @@ function gameLoop(time) {
         });
     }
 
-    if (!gameOver && !fx.celebrating) tryMove(false);
+    if (!gameOver && !gamePaused && !fx.celebrating) tryMove(false);
+
+    // 濒死心跳音效
+    if (!gameOver && !fx.celebrating && audioReady) {
+        const lv = LEVELS[currentLevel];
+        const hbNearDeath = currentLevel >= 1 && (
+            (lv.maxSteps && lv.maxSteps - steps <= 10) ||
+            (lv.timeLimit && timeRemaining <= 10)
+        );
+        if (hbNearDeath && time - lastHeartbeatTime > 1000) {
+            sound.playHeartbeat(true);
+            lastHeartbeatTime = time;
+        }
+    }
+
     updateEffects();
     draw();
     requestAnimationFrame(gameLoop);
@@ -2117,9 +2252,19 @@ document.getElementById('btnDown').addEventListener('click', () => setDirection(
 document.getElementById('btnLeft').addEventListener('click', () => setDirection(-1, 0));
 document.getElementById('btnRight').addEventListener('click', () => setDirection(1, 0));
 document.getElementById('btnA').addEventListener('click', spit);
-document.getElementById('btnB').addEventListener('click', () => { if (!gameOver) { loadLevel(currentLevel); ensureAudio(); } });
-document.getElementById('btnSelect').addEventListener('click', () => { loadLevel(currentLevel); ensureAudio(); });
-document.getElementById('btnStart').addEventListener('click', () => { loadLevel(currentLevel); ensureAudio(); });
+document.getElementById('btnB').addEventListener('click', () => {
+    if (!gameOver && gameStarted) {
+        gamePaused = !gamePaused;
+        document.getElementById('btnB').querySelector('.label').textContent = gamePaused ? '继续' : '暂停';
+    }
+});
+
+// Start button
+document.getElementById('startBtn').addEventListener('click', () => {
+    document.getElementById('startOverlay').classList.add('hidden');
+    if (!gameStarted) gameStarted = true;
+    ensureAudio();
+});
 
 // Hidden spitBtn for disabled-state logic
 document.getElementById('spitBtn').addEventListener('click', spit);
@@ -2428,7 +2573,7 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
     function startGame() {
         if (tutAnimId) { cancelAnimationFrame(tutAnimId); tutAnimId = null; }
         tOverlay.classList.remove('show');
-        loadLevel(0);
+        loadLevel(0, true);
         ensureAudio();
     }
 
@@ -2457,7 +2602,7 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
     loop();
 })();
 
-loadLevel(0);
+loadLevel(0, true);
 requestAnimationFrame(gameLoop);
 </script>
 </body>
