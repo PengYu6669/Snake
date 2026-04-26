@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>拼形蛇 - 像素掌机</title>
+    <title>贪拉蛇 - 像素掌机</title>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -326,6 +326,18 @@
             border-radius: 2px;
         }
 
+        .shell-hint {
+            position: absolute;
+            bottom: 14px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: rgba(255,255,255,0.25);
+            font-family: 'PingFang SC','Microsoft YaHei',Arial,sans-serif;
+            white-space: nowrap;
+            letter-spacing: 0.5px;
+        }
+
         .screw {
             position: absolute;
             width: 8px; height: 8px;
@@ -610,7 +622,7 @@
         <div class="pixel-dot"></div>
     </div>
 
-    <div class="shell-brand">SHAPE-SNAKE SYSTEM</div>
+    <div class="shell-brand">贪拉蛇·TANLA</div>
 
     <div class="screen-bezel">
         <div class="screen-label">
@@ -680,6 +692,8 @@
         <div class="speaker-line"></div>
         <div class="speaker-line"></div>
     </div>
+
+    <div class="shell-hint">咬到自己游戏也会失败哦~</div>
 </div>
 
 <!-- Overlays -->
@@ -741,7 +755,7 @@
 <!-- 交互教程 -->
 <div class="overlay show" id="tutorialOverlay">
     <div class="tutorial-wrap">
-        <div class="tut-brand">▶ SHAPE-SNAKE TUTORIAL</div>
+        <div class="tut-brand">▶ 贪拉蛇 TUTORIAL</div>
         <canvas id="tutorialCanvas"></canvas>
         <div class="tutorial-hint" id="tutorialHint"></div>
         <div class="tutorial-progress" id="tutorialProgress"></div>
@@ -830,7 +844,7 @@ const LEVELS = [
         dir: {x:1, y:0},
         maxSteps: 280,
         timeLimit: 80,
-        resourceCount: 42,
+        resourceCount: 45,
     },
     {
         name: '炼狱矩形',
@@ -860,6 +874,7 @@ let timeRemaining = 0;
 let lastSpitStep = -1;
 let timerInterval = null;
 let levelClearTimer = null;
+let failReason = '';
 
 // ========== SoundSynth ==========
 class SoundSynth {
@@ -1031,6 +1046,56 @@ class SoundSynth {
                 osc.stop(t + 0.15);
             });
         } catch (_) {}
+    }
+    combo(count, pitchOffset = 0) {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        const st = Math.pow(2, pitchOffset / 12);
+        const notes = count === 2 ? [523, 659] :
+                      count === 3 ? [523, 659, 784] :
+                      [523, 659, 784, 1047, 1319];
+        notes.forEach((freq, i) => {
+            try {
+                const delay = i * 0.07;
+                const tt = t + delay;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq * st, tt);
+                gain.gain.setValueAtTime(0.1, tt);
+                gain.gain.exponentialRampToValueAtTime(0.001, tt + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(tt);
+                osc.stop(tt + 0.25);
+            } catch (_) {}
+        });
+        if (count >= 4) {
+            try {
+                const tt = t;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(55, tt);
+                gain.gain.setValueAtTime(0.15, tt);
+                gain.gain.exponentialRampToValueAtTime(0.001, tt + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(tt);
+                osc.stop(tt + 0.25);
+                const buf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * 0.1), this.ctx.sampleRate);
+                const d = buf.getChannelData(0);
+                for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.4;
+                const src = this.ctx.createBufferSource();
+                src.buffer = buf;
+                const ng = this.ctx.createGain();
+                ng.gain.setValueAtTime(0.08, tt);
+                ng.gain.exponentialRampToValueAtTime(0.001, tt + 0.1);
+                src.connect(ng);
+                ng.connect(this.ctx.destination);
+                src.start(tt);
+            } catch (_) {}
+        }
     }
     playHeartbeat(fast) {
         if (!this.ctx) return;
@@ -1267,6 +1332,11 @@ const fx = {
     celebrating: false, celebTimer: 0, flashAlpha: 0,
 };
 
+// Combo system
+let floatingTexts = [];
+let comboPitchOffset = 0;
+let lastComboCount = 0;
+
 function triggerPulse(x, y) {
     sound.success();
     fx.pulses.push({ x: x * CELL + CELL/2, y: y * CELL + CELL/2, life: 1, maxR: CELL * 1.2 });
@@ -1304,8 +1374,59 @@ function triggerCelebration() {
     });
 }
 
+function getCoveredSet() {
+    const s = new Set();
+    for (const key of TARGET) {
+        if (spitBlocks.has(key)) s.add(key);
+    }
+    return s;
+}
+
+function triggerCombo(count, positions) {
+    if (count < 2) return;
+    const cx = positions.reduce((s, p) => s + p.x, 0) / positions.length;
+    const cy = positions.reduce((s, p) => s + p.y, 0) / positions.length;
+    const px = cx * CELL + CELL / 2;
+    const py = cy * CELL + CELL / 2;
+
+    const isConsecutive = lastComboCount >= 2;
+    const pitchOffset = isConsecutive ? comboPitchOffset : 0;
+
+    let label, color, size, soundCount;
+    if (count === 2) {
+        label = 'GOOD'; color = '#ffd700'; size = 24; soundCount = 2;
+    } else if (count === 3) {
+        label = 'GREAT'; color = '#00ffcc'; size = 26; soundCount = 3;
+    } else {
+        label = 'PERFECT'; color = '#ff0055'; size = 32; soundCount = 4;
+    }
+
+    floatingTexts.push({
+        x: px, y: py,
+        text: label, color: color, size: size,
+        life: 1.0, maxLife: 1.0,
+    });
+
+    sound.combo(soundCount, pitchOffset);
+
+    const particleCount = count === 2 ? 8 : count === 3 ? 15 : 30;
+    triggerParticles(px, py, particleCount, color, { spread: count >= 4 ? 5 : 3, gravity: 0.06 });
+
+    if (count >= 4) triggerShake(3);
+
+    if (count >= 2) {
+        if (isConsecutive) {
+            comboPitchOffset = Math.min(comboPitchOffset + 1, 12);
+        } else {
+            comboPitchOffset = 0;
+        }
+    }
+    lastComboCount = count;
+}
+
 function updateEffects() {
     fx.frame++;
+
     for (const p of fx.particles) {
         p.x += p.vx; p.y += p.vy;
         p.vy += p.gravity || 0.08;
@@ -1344,9 +1465,13 @@ function updateEffects() {
         fx.trail.push({ ...snake[0] });
         if (fx.trail.length > 8) fx.trail.shift();
     }
-}
 
-// ========== UI ==========
+    for (const ft of floatingTexts) {
+        ft.y -= 0.4;
+        ft.life -= 0.01;
+    }
+    floatingTexts = floatingTexts.filter(ft => ft.life > 0);
+}
 function showLevelClear() {
     document.getElementById('winTitle').textContent = '🎉 天才！';
     document.getElementById('winTitle').className = 'win-title';
@@ -1459,7 +1584,7 @@ function generatePoster(remaining, won, pct, title, levelIdx) {
 
     pctx.fillStyle = 'rgba(255,255,255,0.45)';
     pctx.font = `12px ${fontBase}`;
-    pctx.fillText(`拼形蛇 · ${levelLabel}`, PW / 2, 34);
+    pctx.fillText(`贪拉蛇 · ${levelLabel}`, PW / 2, 34);
 
     pctx.fillStyle = won ? '#4ecca3' : '#e94560';
     pctx.font = `bold 14px ${fontBase}`;
@@ -1580,10 +1705,32 @@ function getFailMessage(remaining) {
     const total = TARGET.size;
     const filled = total - remaining;
     if (remaining <= 0) return '';
-    if (remaining <= 3) return `仅差 ${remaining} 格！再来一次必过 (${filled}/${total})`;
-    if (remaining <= 10) return `差 ${remaining} 格，已经很近了 (${filled}/${total})`;
-    if (remaining <= 30) return `还差 ${remaining} 格，继续挑战 (${filled}/${total})`;
-    return `还剩 ${remaining} 格，路还很长 (${filled}/${total})`;
+    const r = remaining, f = filled;
+
+    const msgs = {
+        wall: [
+            `墙就在那没动过，是你自己撞上去的。剩${r}格你打算用意念填？ (${f}/${total})`,
+            `地图边界挺明显的吧？${r}格没收完就去怼墙，真有你的。 (${f}/${total})`,
+            `那堵墙已经拒绝了不知道多少个玩家了，你并不特殊。还剩${r}格。 (${f}/${total})`,
+        ],
+        self: [
+            `你的蛇都被自己绕晕了。还有${r}格没填，它选择自我了断。 (${f}/${total})`,
+            `蛇咬尾，经典死循环。${r}格没收完就自尽，代码写得不错嘛。 (${f}/${total})`,
+            `你蛇宁可咬自己也不愿意继续爬了。${r}格，你自己反省一下。 (${f}/${total})`,
+        ],
+        time: [
+            `时间到了。${r}格，差得不多，但你手速配不上你的野心。 (${f}/${total})`,
+            `我数到${r}的时候就不该再等你了。 (${f}/${total})`,
+            `给你多久都不够用，${r}格是留着过年？ (${f}/${total})`,
+        ],
+        steps: [
+            `用了${steps}步，还剩${r}格。这规划能力，建议去做产品经理。 (${f}/${total})`,
+            `${steps}步都没填满${r}格——你是在贪拉蛇里迷路了吗？ (${f}/${total})`,
+            `恭喜你获得${steps}步观光游称号，${r}格目标表示很失望。 (${f}/${total})`,
+        ],
+    };
+    const pool = msgs[failReason] || msgs.steps;
+    return pool[Math.floor(Math.random() * pool.length)];
 }
 
 function getTitle(pct) {
@@ -1717,8 +1864,8 @@ function generateResources(level) {
 
     // 计算每格到最近目标的曼哈顿距离
     const candidates = [];
-    for (let r = 1; r <= grid; r++) {
-        for (let c = 1; c <= grid; c++) {
+    for (let r = 0; r < grid; r++) {
+        for (let c = 0; c < grid; c++) {
             const key = `${c},${r}`;
             if (targetSet.has(key) || snakeSet.has(key)) continue;
             let minDist = Infinity;
@@ -1793,7 +1940,7 @@ function loadLevel(index, showStart) {
             timeRemaining--;
             updateStats();
             if (timeRemaining <= 10 && timeRemaining > 0 && gameStarted) safeVibrate(50);
-            if (timeRemaining <= 0 && !gameOver && !fx.celebrating) handleFail();
+            if (timeRemaining <= 0 && !gameOver && !fx.celebrating) handleFail('time');
         }, 1000);
     }
 
@@ -2102,6 +2249,27 @@ function draw() {
         ctx.fillText('已暂停 · 点击继续', LOGICAL_W / 2, LOGICAL_H / 2 + 36);
     }
 
+    // Floating combo texts
+    for (const ft of floatingTexts) {
+        const alpha = ft.life / ft.maxLife;
+        const scale = 1 + (1 - alpha) * 0.3;
+        ctx.save();
+        ctx.translate(ft.x, ft.y);
+        ctx.scale(scale, scale);
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${ft.size}px "Courier New",monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = ft.color;
+        ctx.shadowBlur = 20;
+        ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+        ctx.lineWidth = 2;
+        ctx.strokeText(ft.text, 0, 0);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, 0, 0);
+        ctx.restore();
+    }
+
     ctx.restore();
 }
 
@@ -2116,12 +2284,12 @@ function tryMove(immediate) {
     const nx = head.x + dir.x, ny = head.y + dir.y;
 
     if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
-        if (currentLevel >= 1) { safeVibrate(200); handleFail(); return; }
+        if (currentLevel >= 1) { safeVibrate(200); handleFail('wall'); return; }
         if (lastMoveSucceeded) triggerShake(6);
         lastMoveSucceeded = false; return;
     }
     if (snake.slice(0, -1).some(s => s.x === nx && s.y === ny)) {
-        if (currentLevel >= 1) { safeVibrate(200); handleFail(); return; }
+        if (currentLevel >= 1) { safeVibrate(200); handleFail('self'); return; }
         if (lastMoveSucceeded) triggerShake(6);
         lastMoveSucceeded = false; return;
     }
@@ -2165,6 +2333,7 @@ function spit() {
     const tail = snake[snake.length - 1];
     const tailKey = `${tail.x},${tail.y}`;
     if (spitBlocks.has(tailKey)) return;
+    const beforeCovered = getCoveredSet();
 
     if (TARGET.has(tailKey)) {
         // ====== 批量模式：蛇尾在目标格内，连续检测尾部 → 批量固化 ======
@@ -2204,6 +2373,21 @@ function spit() {
         updateStats();
     }
 
+    const newKeys = [];
+    for (const tk of TARGET) {
+        if (beforeCovered.has(tk)) continue;
+        if (spitBlocks.has(tk)) {
+            newKeys.push(tk);
+        }
+    }
+    if (newKeys.length > 0) {
+        const positions = newKeys.map(k => {
+            const [cx, cy] = k.split(',').map(Number);
+            return {x: cx, y: cy};
+        });
+        triggerCombo(newKeys.length, positions);
+    }
+
     checkWin();
     if (!gameOver) checkLose();
 }
@@ -2218,10 +2402,11 @@ function checkWin() {
 
 function checkLose() {
     const level = LEVELS[currentLevel];
-    if (level.maxSteps && steps >= level.maxSteps) handleFail();
+    if (level.maxSteps && steps >= level.maxSteps) handleFail('steps');
 }
 
-function handleFail() {
+function handleFail(reason) {
+    failReason = reason || '';
     gameOver = true; gameFailed = true;
     safeVibrate(400);
     sound.loseSound(); sound.stopBGM();
