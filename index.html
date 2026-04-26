@@ -1996,16 +1996,49 @@ function spit() {
     if (steps === lastSpitStep) return;
     lastSpitStep = steps;
     if (!gameStarted) gameStarted = true;
+
     const tail = snake[snake.length - 1];
-    const key = `${tail.x},${tail.y}`;
-    if (spitBlocks.has(key)) return;
-    spitBlocks.set(key, { spitProgress: 0 });
-    snake.pop();
-    steps++;
-    safeVibrate(30);
-    triggerParticles(tail.x * CELL + CELL/2, tail.y * CELL + CELL/2, 4, '#4ecca3', { spread: 2 });
-    updateStats();
-    if (TARGET.has(key)) triggerPulse(tail.x, tail.y);
+    const tailKey = `${tail.x},${tail.y}`;
+    if (spitBlocks.has(tailKey)) return;
+
+    if (TARGET.has(tailKey)) {
+        // ====== 批量模式：蛇尾在目标格内，连续检测尾部 → 批量固化 ======
+        const toSpit = [];
+        for (let i = snake.length - 1; i > 0; i--) {
+            const seg = snake[i];
+            if (TARGET.has(`${seg.x},${seg.y}`)) {
+                toSpit.push({ x: seg.x, y: seg.y, key: `${seg.x},${seg.y}` });
+            } else {
+                break;
+            }
+        }
+        const spitCount = toSpit.length;
+        if (spitCount === 0) return;
+
+        // 批量标记吐块
+        toSpit.forEach(({ key }) => spitBlocks.set(key, { spitProgress: 0 }));
+
+        // 计算批次中心用于粒子爆发
+        const mid = toSpit[Math.floor(spitCount / 2)];
+
+        // 一次性移除尾部连续段
+        snake.splice(-spitCount, spitCount);
+
+        steps++;
+        safeVibrate(30);
+        triggerParticles(mid.x * CELL + CELL / 2, mid.y * CELL + CELL / 2, spitCount * 5, '#4ecca3', { spread: 3 });
+        triggerPulse(mid.x, mid.y);
+        updateStats();
+    } else {
+        // ====== 单格模式：蛇尾不在目标格，保持原有逻辑 ======
+        spitBlocks.set(tailKey, { spitProgress: 0 });
+        snake.pop();
+        steps++;
+        safeVibrate(30);
+        triggerParticles(tail.x * CELL + CELL / 2, tail.y * CELL + CELL / 2, 4, '#4ecca3', { spread: 2 });
+        updateStats();
+    }
+
     checkWin();
     if (!gameOver) checkLose();
 }
