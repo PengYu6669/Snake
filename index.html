@@ -172,13 +172,13 @@
 
         .dpad {
             position: relative;
-            width: 120px;
-            height: 120px;
+            width: 164px;
+            height: 164px;
         }
         .dpad-center {
             position: absolute;
-            top: 40px; left: 40px;
-            width: 40px; height: 40px;
+            top: 58px; left: 58px;
+            width: 48px; height: 48px;
             background: #1e1b24;
             border-radius: 4px;
             box-shadow: inset 0 2px 4px rgba(0,0,0,0.5), 0 2px 0 rgba(255,255,255,0.05);
@@ -199,10 +199,10 @@
             transform: translateY(4px);
             box-shadow: 0 0 0 #221f29, inset 0 2px 4px rgba(0,0,0,0.5);
         }
-        .dpad-up { top: 0; left: 40px; width: 40px; height: 40px; }
-        .dpad-down { bottom: 0; left: 40px; width: 40px; height: 40px; }
-        .dpad-left { top: 40px; left: 0; width: 40px; height: 40px; }
-        .dpad-right { top: 40px; right: 0; width: 40px; height: 40px; }
+        .dpad-up { top: 0; left: 58px; width: 48px; height: 48px; }
+        .dpad-down { bottom: 0; left: 58px; width: 48px; height: 48px; }
+        .dpad-left { top: 58px; left: 0; width: 48px; height: 48px; }
+        .dpad-right { top: 58px; right: 0; width: 48px; height: 48px; }
 
         .dpad-up::after, .dpad-down::after, .dpad-left::after, .dpad-right::after {
             content: '';
@@ -211,10 +211,10 @@
             border: solid transparent;
             border-width: 6px;
         }
-        .dpad-up::after { bottom: 10px; left: 14px; border-bottom-color: rgba(255,255,255,0.3); }
-        .dpad-down::after { top: 10px; left: 14px; border-top-color: rgba(255,255,255,0.3); }
-        .dpad-left::after { right: 10px; top: 14px; border-right-color: rgba(255,255,255,0.3); }
-        .dpad-right::after { left: 10px; top: 14px; border-left-color: rgba(255,255,255,0.3); }
+        .dpad-up::after { bottom: 10px; left: 18px; border-bottom-color: rgba(255,255,255,0.3); }
+        .dpad-down::after { top: 10px; left: 18px; border-top-color: rgba(255,255,255,0.3); }
+        .dpad-left::after { right: 10px; top: 18px; border-right-color: rgba(255,255,255,0.3); }
+        .dpad-right::after { left: 10px; top: 18px; border-left-color: rgba(255,255,255,0.3); }
 
         .action-buttons {
             display: flex;
@@ -939,19 +939,21 @@ class SoundSynth {
     winFanfare() {
         if (!this.ctx) return;
         try {
-            [262, 330, 392, 523, 659, 784, 1047].forEach((freq, i) => {
-                const delay = i * 0.07;
+            // 方波上行琶音 C5→E5→G5→C6
+            [523, 659, 784, 1047].forEach((freq, i) => {
+                const delay = i * 0.12;
                 const t = this.ctx.currentTime + delay;
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-                osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                osc.type = 'square';
                 osc.frequency.setValueAtTime(freq, t);
-                gain.gain.setValueAtTime(0.1, t);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                const dur = i < 3 ? 0.15 : 0.35;
+                gain.gain.setValueAtTime(0.08, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
                 osc.start(t);
-                osc.stop(t + 0.55);
+                osc.stop(t + dur + 0.05);
             });
         } catch (_) {}
     }
@@ -959,28 +961,29 @@ class SoundSynth {
         if (!this.ctx) return;
         try {
             const t = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(350, t);
-            osc.frequency.exponentialRampToValueAtTime(50, t + 0.9);
-            gain.gain.setValueAtTime(0.12, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 1);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(t);
-            osc.stop(t + 1.1);
-            const buf = this.ctx.createBuffer(1, this.ctx.sampleRate * 0.6, this.ctx.sampleRate);
-            const d = buf.getChannelData(0);
-            for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * 0.2;
-            const src = this.ctx.createBufferSource();
-            src.buffer = buf;
-            const ng = this.ctx.createGain();
-            ng.gain.setValueAtTime(0.08, t);
-            ng.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
-            src.connect(ng);
-            ng.connect(this.ctx.destination);
-            src.start(t);
+            // 第一段：sawtooth 400→100Hz 下滑 400ms
+            const osc1 = this.ctx.createOscillator();
+            const g1 = this.ctx.createGain();
+            osc1.type = 'sawtooth';
+            osc1.frequency.setValueAtTime(400, t);
+            osc1.frequency.exponentialRampToValueAtTime(100, t + 0.4);
+            g1.gain.setValueAtTime(0.1, t);
+            g1.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+            osc1.connect(g1);
+            g1.connect(this.ctx.destination);
+            osc1.start(t);
+            osc1.stop(t + 0.55);
+            // 第二段：square 80Hz 低沉的"咚"，掉坑感
+            const osc2 = this.ctx.createOscillator();
+            const g2 = this.ctx.createGain();
+            osc2.type = 'square';
+            osc2.frequency.setValueAtTime(80, t + 0.4);
+            g2.gain.setValueAtTime(0.12, t + 0.4);
+            g2.gain.exponentialRampToValueAtTime(0.001, t + 0.9);
+            osc2.connect(g2);
+            g2.connect(this.ctx.destination);
+            osc2.start(t + 0.4);
+            osc2.stop(t + 1.0);
         } catch (_) {}
     }
     collect() {
@@ -1151,9 +1154,14 @@ let lastMoveTime = 0;
 let lastMoveSucceeded = true;
 const MOVE_INTERVAL = 350;
 
+const DIR_STR = {'0,-1':'UP','0,1':'DOWN','-1,0':'LEFT','1,0':'RIGHT'};
+const OPPOSITE = { UP:'DOWN', DOWN:'UP', LEFT:'RIGHT', RIGHT:'LEFT' };
+
 function setDirection(dx, dy) {
     if (gameOver || fx.celebrating) return;
-    if (dx === -dir.x && dy === -dir.y && snake.length > 1) return;
+    const newKey = `${dx},${dy}`;
+    const curKey = `${dir.x},${dir.y}`;
+    if (OPPOSITE[DIR_STR[newKey]] === DIR_STR[curKey]) return;
     if (!gameStarted) gameStarted = true;
     dir = {x: dx, y: dy};
     sound.glissando();
@@ -2117,10 +2125,12 @@ document.getElementById('btnStart').addEventListener('click', () => { loadLevel(
 document.getElementById('spitBtn').addEventListener('click', spit);
 
 let touchStartX = 0, touchStartY = 0, lastTapTime = 0;
-canvas.addEventListener('touchstart', e => {
+document.querySelector('.pocket-shell').addEventListener('touchstart', e => {
     touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
 }, {passive: true});
-canvas.addEventListener('touchend', e => {
+document.querySelector('.pocket-shell').addEventListener('touchend', e => {
+    // 如果触摸目标是按钮，不触发转向
+    if (e.target.closest('.dpad-up,.dpad-down,.dpad-left,.dpad-right,.btn-ab,.btn-pill')) return;
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
     const dist = Math.hypot(dx, dy);
