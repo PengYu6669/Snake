@@ -681,6 +681,21 @@
     </div>
 </div>
 
+<div class="overlay" id="levelSelectOverlay">
+    <div class="settle-box">
+        <h2 class="win-title" style="font-size:24px;margin-bottom:8px">🎮 选关</h2>
+        <p style="color:#888;font-size:13px;margin:0 0 14px">点击关卡直接跳转</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+            <button class="btn-next lv-btn" data-level="0">第1关</button>
+            <button class="btn-next lv-btn" data-level="1">第2关</button>
+            <button class="btn-next lv-btn" data-level="2">第3关</button>
+            <button class="btn-next lv-btn" data-level="3">第4关</button>
+            <button class="btn-next lv-btn" data-level="4">第5关</button>
+        </div>
+        <button class="btn-home" id="levelSelectClose" style="margin-top:14px;min-width:100px">关闭</button>
+    </div>
+</div>
+
 <div class="overlay" id="settleOverlay">
     <div class="settle-box">
         <h2 id="settleTitle" class="win-title">通关!</h2>
@@ -750,44 +765,27 @@ const LEVELS = [
         dir: {x:1, y:0},
         maxSteps: 400,
         timeLimit: 120,
-        resources: [
-            // 35个资源块，包围十字目标区
-            [3,4],[3,5],[3,6],[3,7],[3,8],[3,9],[3,10],
-            [11,4],[11,5],[11,6],[11,7],[11,8],[11,9],[11,10],
-            [4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],
-            [4,11],[5,11],[6,11],[7,11],[8,11],[9,11],[10,11],
-            [3,3],[3,11],[11,3],[11,11],
-            [2,6],[2,7],[2,8],
-        ],
+        resourceCount: 35,
     },
     {
-        name: '宽十字',
+        name: 'T型',
         grid: 14,
         target: [
-            // 宽十字 36格 — 横臂 rows 6-8 cols 4-11; 纵臂 rows 4-10 cols 7-9
-            [6,4],[6,5],[6,6],[6,7],[6,8],[6,9],[6,10],[6,11],
-            [7,4],[7,5],[7,6],[7,7],[7,8],[7,9],[7,10],[7,11],
-            [8,4],[8,5],[8,6],[8,7],[8,8],[8,9],[8,10],[8,11],
-            [4,7],[4,8],[4,9],
-            [5,7],[5,8],[5,9],
-            [9,7],[9,8],[9,9],
-            [10,7],[10,8],[10,9],
+            // T型 36格 — 横顶 rows 4-6 cols 4-10; 竖干 rows 7-11 cols 6-8
+            [4,4],[4,5],[4,6],[4,7],[4,8],[4,9],[4,10],
+            [5,4],[5,5],[5,6],[5,7],[5,8],[5,9],[5,10],
+            [6,4],[6,5],[6,6],[6,7],[6,8],[6,9],[6,10],
+            [7,6],[7,7],[7,8],
+            [8,6],[8,7],[8,8],
+            [9,6],[9,7],[9,8],
+            [10,6],[10,7],[10,8],
+            [11,6],[11,7],[11,8],
         ],
         snake: [{x:4,y:7},{x:5,y:7},{x:6,y:7},{x:7,y:7},{x:8,y:7}],
         dir: {x:1, y:0},
         maxSteps: 320,
         timeLimit: 100,
-        resources: [
-            // 36个资源块，包围宽十字目标区
-            [3,5],[3,6],[3,7],[3,8],[3,9],[3,10],
-            [11,5],[11,6],[11,7],[11,8],[11,9],[11,10],
-            [4,3],[5,3],[6,3],[7,3],[8,3],[9,3],[10,3],
-            [4,12],[5,12],[6,12],[7,12],[8,12],[9,12],[10,12],
-            [4,6],[5,6],
-            [9,6],[10,6],
-            [4,5],[5,4],[5,5],
-            [9,4],[9,5],[10,5],
-        ],
+        resourceCount: 36,
     },
     {
         name: '矩形',
@@ -804,16 +802,7 @@ const LEVELS = [
         dir: {x:1, y:0},
         maxSteps: 280,
         timeLimit: 80,
-        resources: [
-            // 42个资源块，环绕矩形外围
-            [3,4],[3,5],[3,6],[3,7],[3,8],[3,9],[3,10],[3,11],[3,12],
-            [9,4],[9,5],[9,6],[9,7],[9,8],[9,9],[9,10],[9,11],[9,12],
-            [4,3],[5,3],[6,3],[7,3],[8,3],
-            [4,13],[5,13],[6,13],[7,13],[8,13],
-            [3,3],[3,13],[9,3],[9,13],
-            [2,5],[2,6],[2,7],[2,8],[2,9],
-            [10,5],[10,6],[10,7],[10,8],[10,9],
-        ],
+        resourceCount: 42,
     },
     {
         name: '炼狱矩形',
@@ -830,17 +819,7 @@ const LEVELS = [
         dir: {x:1, y:0},
         maxSteps: 260,
         timeLimit: 60,
-        resources: [
-            // 55个资源块，环绕矩形外围 + 外圈
-            [2,3],[2,4],[2,5],[2,6],[2,7],[2,8],[2,9],[2,10],
-            [10,3],[10,4],[10,5],[10,6],[10,7],[10,8],[10,9],[10,10],
-            [3,2],[4,2],[5,2],[6,2],[7,2],[8,2],[9,2],
-            [3,11],[4,11],[5,11],[6,11],[7,11],[8,11],[9,11],
-            [1,4],[1,5],[1,6],[1,7],[1,8],[1,9],
-            [11,4],[11,5],[11,6],[11,7],[11,8],[11,9],
-            [4,1],[5,1],[6,1],[7,1],[8,1],[3,1],
-            [3,12],[4,12],[5,12],[6,12],[7,12],[8,12],[9,12],
-        ],
+        resourceCount: 55,
     },
 ];
 
@@ -1216,6 +1195,7 @@ function triggerCelebration() {
     fx.flashAlpha = 0.6;
     sound.winFanfare();
     sound.stopBGM();
+    safeVibrate([100,50,100,50,200]);
     clearInterval(timerInterval);
     TARGET.forEach(key => {
         const [cx, cy] = key.split(',').map(Number);
@@ -1505,6 +1485,17 @@ function getTitle(pct) {
     return '🐣 菜蛇';
 }
 
+function safeVibrate(pattern) {
+    if (!navigator.vibrate) return;
+    try {
+        if (Array.isArray(pattern) && !navigator.vibrate(pattern)) {
+            navigator.vibrate(200);
+        } else {
+            navigator.vibrate(pattern);
+        }
+    } catch (_) {}
+}
+
 function showSettleScreen(won) {
     clearInterval(timerInterval);
     sound.stopBGM();
@@ -1597,6 +1588,64 @@ document.getElementById('posterShare').addEventListener('click', async () => {
     }
 });
 
+// ========== 临时选关 ==========
+document.getElementById('levelLabel').style.cursor = 'pointer';
+document.getElementById('levelLabel').addEventListener('click', () => {
+    document.getElementById('levelSelectOverlay').classList.add('show');
+});
+document.querySelectorAll('.lv-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.level);
+        document.getElementById('levelSelectOverlay').classList.remove('show');
+        if (idx >= 0 && idx < LEVELS.length) {
+            document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'));
+            clearInterval(timerInterval);
+            if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
+            loadLevel(idx);
+            ensureAudio();
+        }
+    });
+});
+document.getElementById('levelSelectClose').addEventListener('click', () => {
+    document.getElementById('levelSelectOverlay').classList.remove('show');
+});
+
+// ========== 资源随机生成 ==========
+function generateResources(level) {
+    const grid = level.grid;
+    const targetCells = level.target.map(([r,c]) => `${c},${r}`);
+    const targetSet = new Set(targetCells);
+    const snakeSet = new Set(level.snake.map(p => `${p.x},${p.y}`));
+
+    // 计算每格到最近目标的曼哈顿距离
+    const candidates = [];
+    for (let r = 1; r <= grid; r++) {
+        for (let c = 1; c <= grid; c++) {
+            const key = `${c},${r}`;
+            if (targetSet.has(key) || snakeSet.has(key)) continue;
+            let minDist = Infinity;
+            for (const [tr, tc] of level.target) {
+                const d = Math.abs(r - tr) + Math.abs(c - tc);
+                if (d < minDist) minDist = d;
+            }
+            // 取距离目标 1~2 格（大关卡可到 3 格）
+            const maxDist = grid >= 14 ? 3 : 2;
+            if (minDist >= 1 && minDist <= maxDist) {
+                candidates.push([r, c]);
+            }
+        }
+    }
+
+    // 打乱后取所需数量
+    for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+
+    const count = Math.min(level.resourceCount, candidates.length);
+    return candidates.slice(0, count);
+}
+
 // ========== 游戏逻辑 ==========
 function loadLevel(index) {
     clearInterval(timerInterval);
@@ -1628,9 +1677,10 @@ function loadLevel(index) {
     }
 
     resourceBlocks = new Map();
-    if (level.resources) {
+    const resPositions = level.resources || (level.resourceCount ? generateResources(level) : []);
+    if (resPositions.length) {
         const snakeKeys = new Set(snake.map(s => `${s.x},${s.y}`));
-        level.resources.forEach(([r,c]) => {
+        resPositions.forEach(([r,c]) => {
             const key = `${c},${r}`;
             if (!snakeKeys.has(key)) resourceBlocks.set(key, true);
         });
@@ -1642,6 +1692,7 @@ function loadLevel(index) {
             if (!gameStarted) return;
             timeRemaining--;
             updateStats();
+            if (timeRemaining <= 10 && timeRemaining > 0 && gameStarted) safeVibrate(50);
             if (timeRemaining <= 0 && !gameOver && !fx.celebrating) handleFail();
         }, 1000);
     }
@@ -1652,6 +1703,7 @@ function loadLevel(index) {
     document.getElementById('loseOverlay').classList.remove('show');
     document.getElementById('posterOverlay').classList.remove('show');
     document.getElementById('settleOverlay').classList.remove('show');
+    document.getElementById('levelSelectOverlay').classList.remove('show');
 
     document.getElementById('levelLabel').textContent = `第${index+1}关·${level.name}`;
     updateStats();
@@ -1899,12 +1951,12 @@ function tryMove(immediate) {
     const nx = head.x + dir.x, ny = head.y + dir.y;
 
     if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
-        if (currentLevel >= 1) { handleFail(); return; }
+        if (currentLevel >= 1) { safeVibrate(200); handleFail(); return; }
         if (lastMoveSucceeded) triggerShake(6);
         lastMoveSucceeded = false; return;
     }
     if (snake.slice(0, -1).some(s => s.x === nx && s.y === ny)) {
-        if (currentLevel >= 1) { handleFail(); return; }
+        if (currentLevel >= 1) { safeVibrate(200); handleFail(); return; }
         if (lastMoveSucceeded) triggerShake(6);
         lastMoveSucceeded = false; return;
     }
@@ -1920,6 +1972,7 @@ function tryMove(immediate) {
     if (resourceBlocks.has(key)) {
         resourceBlocks.delete(key);
         sound.collect();
+        safeVibrate(50);
         triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 8, '#ffd700', { spread: 3 });
     } else if (!recycled) {
         snake.pop();
@@ -1949,6 +2002,7 @@ function spit() {
     spitBlocks.set(key, { spitProgress: 0 });
     snake.pop();
     steps++;
+    safeVibrate(30);
     triggerParticles(tail.x * CELL + CELL/2, tail.y * CELL + CELL/2, 4, '#4ecca3', { spread: 2 });
     updateStats();
     if (TARGET.has(key)) triggerPulse(tail.x, tail.y);
@@ -1976,6 +2030,7 @@ function checkLose() {
 
 function handleFail() {
     gameOver = true; gameFailed = true;
+    safeVibrate(400);
     sound.loseSound(); sound.stopBGM();
     clearInterval(timerInterval);
     if (currentLevel === 0) showLoseScreen();
