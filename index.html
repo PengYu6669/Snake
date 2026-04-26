@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>拼形蛇 - 像素掌机</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
 
         body {
             background: #0f0f12;
@@ -15,9 +21,6 @@
             align-items: center;
             font-family: 'Courier New', Courier, monospace;
             overflow: hidden;
-            -webkit-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
             overscroll-behavior: none;
             touch-action: none;
         }
@@ -1411,7 +1414,7 @@ function addNoise(pctx, intensity) {
     pctx.putImageData(imgData, 0, 0);
 }
 
-function generatePoster(remaining, won, pct, title) {
+function generatePoster(remaining, won, pct, title, levelIdx) {
     const PW = 375, PH = 812;
     const dpr = window.devicePixelRatio || 1;
     const totalTarget = TARGET.size;
@@ -1420,6 +1423,8 @@ function generatePoster(remaining, won, pct, title) {
     pc.width = PW * dpr; pc.height = PH * dpr;
     const pctx = pc.getContext('2d');
     pctx.scale(dpr, dpr);
+    const isLevel2 = levelIdx === 1;
+    const levelLabel = isLevel2 ? '第二关' : '最终关';
 
     const grad = pctx.createLinearGradient(0, 0, 0, PH);
     grad.addColorStop(0, '#1a0a2e');
@@ -1454,7 +1459,7 @@ function generatePoster(remaining, won, pct, title) {
 
     pctx.fillStyle = 'rgba(255,255,255,0.45)';
     pctx.font = `12px ${fontBase}`;
-    pctx.fillText('拼形蛇 · 最终关', PW / 2, 34);
+    pctx.fillText(`拼形蛇 · ${levelLabel}`, PW / 2, 34);
 
     pctx.fillStyle = won ? '#4ecca3' : '#e94560';
     pctx.font = `bold 14px ${fontBase}`;
@@ -1481,7 +1486,14 @@ function generatePoster(remaining, won, pct, title) {
 
     pctx.fillStyle = won ? '#4ecca3' : '#ff4466';
     pctx.font = `bold 17px ${fontBase}`;
-    const subtitle = won ? `完成度 ${filled}/${totalTarget} · ${pct}%` : '「你也过不了最终关」';
+    let subtitle;
+    if (won) {
+        subtitle = `完成度 ${filled}/${totalTarget} · ${pct}%`;
+    } else if (isLevel2) {
+        subtitle = '「你也过不了第二关」';
+    } else {
+        subtitle = `完成度 ${filled}/${totalTarget} · ${pct}%`;
+    }
     pctx.fillText(subtitle, PW / 2, 270);
 
     const ringCX = PW / 2, ringCY = 350, ringR = 56;
@@ -1655,7 +1667,7 @@ function showPoster(won) {
     const total = TARGET.size;
     const filled = total - remaining;
     const pct = Math.round((filled / total) * 100);
-    const pc = generatePoster(remaining, won, pct, getTitle(pct));
+    const pc = generatePoster(remaining, won, pct, getTitle(pct), currentLevel);
     document.getElementById('posterImg').src = pc.toDataURL('image/png');
     document.getElementById('posterMessage').textContent = won ? '' : getFailMessage(remaining);
     document.getElementById('posterOverlay').classList.add('show');
@@ -1667,22 +1679,11 @@ document.getElementById('posterRetry').addEventListener('click', () => {
     ensureAudio();
 });
 
-document.getElementById('posterShare').addEventListener('click', async () => {
+document.getElementById('posterShare').addEventListener('click', () => {
     const img = document.getElementById('posterImg');
-    try {
-        const resp = await fetch(img.src);
-        const blob = await resp.blob();
-        const file = new File([blob], 'shape-snake-fail.png', { type: 'image/png' });
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: '拼形蛇', text: '我挑战了拼形蛇第5关！' });
-        } else {
-            const a = document.createElement('a');
-            a.href = img.src; a.download = 'shape-snake-fail.png'; a.click();
-        }
-    } catch (_) {
-        const a = document.createElement('a');
-        a.href = img.src; a.download = 'shape-snake-fail.png'; a.click();
-    }
+    const a = document.createElement('a');
+    a.href = img.src; a.download = 'shapesnake.png';
+    a.click();
 });
 
 // ========== 临时选关 ==========
