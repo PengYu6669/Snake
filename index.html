@@ -640,10 +640,12 @@
             </div>
         </div>
 
-        <canvas id="gameCanvas"></canvas>
-        <div class="start-overlay" id="startOverlay">
-            <div class="start-btn" id="startBtn">开始游戏</div>
-            <div class="start-hint">滑动屏幕转向 · 双击吐块 · 方向键也可以点哦~</div>
+        <div style="position:relative">
+            <canvas id="gameCanvas"></canvas>
+            <div class="start-overlay" id="startOverlay">
+                <div class="start-btn" id="startBtn">开始游戏</div>
+                <div class="start-hint">滑动屏幕转向 · 双击吐块 · 方向键也可以点哦~</div>
+            </div>
         </div>
     </div>
 
@@ -1030,20 +1032,55 @@ class SoundSynth {
     playHeartbeat(fast) {
         if (!this.ctx) return;
         try {
-            const interval = fast ? 0.5 : 1.0;
-            const t = this.ctx.currentTime;
-            [0, interval].forEach(offset => {
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(40, t + offset);
-                gain.gain.setValueAtTime(0.15, t + offset);
-                gain.gain.exponentialRampToValueAtTime(0.001, t + offset + 0.22);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start(t + offset);
-                osc.stop(t + offset + 0.25);
-            });
+            const ctx = this.ctx;
+            const t = ctx.currentTime;
+
+            // 压缩器
+            const compressor = ctx.createDynamicsCompressor();
+            compressor.threshold.setValueAtTime(-24, t);
+            compressor.knee.setValueAtTime(30, t);
+            compressor.ratio.setValueAtTime(12, t);
+            compressor.attack.setValueAtTime(0.003, t);
+            compressor.release.setValueAtTime(0.25, t);
+            compressor.connect(ctx.destination);
+
+            // 咚（重）55Hz
+            const osc1 = ctx.createOscillator();
+            const g1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(55, t);
+            osc1.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+            g1.gain.setValueAtTime(0, t);
+            g1.gain.linearRampToValueAtTime(0.9, t + 0.02);
+            g1.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+            osc1.connect(g1); g1.connect(compressor);
+            osc1.start(t); osc1.stop(t + 0.25);
+
+            // 哒（轻）65Hz
+            const osc2 = ctx.createOscillator();
+            const g2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(65, t + 0.28);
+            osc2.frequency.exponentialRampToValueAtTime(45, t + 0.35);
+            g2.gain.setValueAtTime(0, t + 0.28);
+            g2.gain.linearRampToValueAtTime(0.5, t + 0.30);
+            g2.gain.exponentialRampToValueAtTime(0.01, t + 0.45);
+            osc2.connect(g2); g2.connect(compressor);
+            osc2.start(t + 0.28); osc2.stop(t + 0.45);
+
+            // 噪声层
+            const bufferSize = ctx.sampleRate * 0.3;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            const g3 = ctx.createGain();
+            g3.gain.setValueAtTime(0, t);
+            g3.gain.linearRampToValueAtTime(0.35, t + 0.02);
+            g3.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            noise.connect(g3); g3.connect(compressor);
+            noise.start(t); noise.stop(t + 0.3);
         } catch (_) {}
     }
     startBGM() {
@@ -1902,9 +1939,9 @@ function draw() {
         ctx.restore();
     });
 
-    const isNearDeath = currentLevel >= 1 && gameStarted && !gameOver && (
-        (LEVELS[currentLevel].maxSteps && LEVELS[currentLevel].maxSteps - steps <= 10) ||
-        (LEVELS[currentLevel].timeLimit && timeRemaining <= 10)
+    const isNearDeath = gameStarted && !gameOver && (
+        (LEVELS[currentLevel].maxSteps && steps >= LEVELS[currentLevel].maxSteps * 0.8) ||
+        (LEVELS[currentLevel].timeLimit && timeRemaining <= LEVELS[currentLevel].timeLimit * 0.2)
     );
     snake.forEach((seg, i) => {
         const isHead = i === 0;
@@ -1994,54 +2031,53 @@ function draw() {
         }
     }
 
-    // 濒死滤镜：去饱和红黑层 + 血红色脉动目标格 + 径向边缘 + 全局闪烁 + 微震动
+    // 濒死滤镜
     if (isNearDeath && gameStarted && !gameOver) {
-        // 去饱和偏红半透明层
-        ctx.fillStyle = 'rgba(10,0,0,0.55)';
+        const now = Date.now();
+        const pulse = (Math.sin(now / 200) + 1) / 2;
+
+        // 1. 偏红暗层
+        ctx.fillStyle = 'rgba(15,0,0,0.5)';
         ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
 
-        // 血红色脉动未填充目标格（200ms 周期）
-        const bloodT = Math.sin(Date.now() / 200 * Math.PI);
-        const bloodAlpha = bloodT * 0.2 + 0.8;
+        // 2. 未填充目标格：实心血红填充 + 白色描边 + 外发光
         TARGET.forEach(key => {
             if (snake.some(s => `${s.x},${s.y}` === key) || spitBlocks.has(key)) return;
             const [cx, cy] = key.split(',').map(Number);
-            ctx.save();
-            ctx.shadowColor = '#ff0044';
-            ctx.shadowBlur = 15 + bloodT * 10 + 10;
-            ctx.fillStyle = `rgba(255, 0, 68, ${bloodAlpha * 0.4 + 0.6})`;
-            ctx.fillRect(cx * CELL, cy * CELL, CELL, CELL);
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillStyle = `rgba(255, 0, 68, ${0.55 + pulse * 0.25})`;
+            ctx.fillRect(cx * CELL + 1, cy * CELL + 1, CELL - 2, CELL - 2);
+            ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
-            ctx.strokeRect(cx * CELL + 1, cy * CELL + 1, CELL - 2, CELL - 2);
-            ctx.restore();
+            ctx.strokeRect(cx * CELL + 3, cy * CELL + 3, CELL - 6, CELL - 6);
+            ctx.shadowColor = '#ff0044';
+            ctx.shadowBlur = 15 + pulse * 15;
+            ctx.strokeRect(cx * CELL + 3, cy * CELL + 3, CELL - 6, CELL - 6);
+            ctx.shadowBlur = 0;
         });
 
-        // 径向渐变：中心透明 → 边缘血红
-        const edgeUrgency = Math.sin(t * 3) * 0.15 + 0.35;
-        const grad = ctx.createRadialGradient(
-            LOGICAL_W / 2, LOGICAL_H / 2, LOGICAL_W * 0.15,
-            LOGICAL_W / 2, LOGICAL_H / 2, LOGICAL_W * 0.55
+        // 3. 屏幕边缘径向渐变
+        const edgeAlpha = 0.3 + pulse * 0.3;
+        const rg = ctx.createRadialGradient(
+            LOGICAL_W / 2, LOGICAL_H / 2, LOGICAL_W * 0.35,
+            LOGICAL_W / 2, LOGICAL_H / 2, LOGICAL_W * 0.85
         );
-        grad.addColorStop(0, 'rgba(255,0,68,0)');
-        grad.addColorStop(1, `rgba(255,0,68,${edgeUrgency})`);
-        ctx.fillStyle = grad;
+        rg.addColorStop(0, 'transparent');
+        rg.addColorStop(1, `rgba(255, 0, 68, ${edgeAlpha})`);
+        ctx.fillStyle = rg;
         ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
 
-        // 最外层红色粗边框脉动 8~16px
-        const borderWidth = 8 + Math.sin(t * 3) * 4;
-        ctx.strokeStyle = `rgba(255, 0, 68, ${Math.sin(t * 4) * 0.3 + 0.7})`;
-        ctx.lineWidth = borderWidth;
-        ctx.strokeRect(borderWidth / 2, borderWidth / 2, LOGICAL_W - borderWidth, LOGICAL_H - borderWidth);
+        // 粗红边框
+        ctx.strokeStyle = `rgba(255, 0, 68, ${0.5 + pulse * 0.3})`;
+        ctx.lineWidth = 8 + pulse * 6;
+        ctx.strokeRect(6, 6, LOGICAL_W - 12, LOGICAL_H - 12);
 
-        // 全局闪烁 rgba(255,0,68,0.15) 周期 300ms
-        if (Math.floor(Date.now() / 300) % 2 === 0) {
-            ctx.fillStyle = 'rgba(255,0,68,0.15)';
+        // 4. 全局闪红
+        if (Math.floor(now / 300) % 2 === 0) {
+            ctx.fillStyle = 'rgba(255, 0, 68, 0.15)';
             ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
         }
 
-        // 屏幕微震动
+        // 5. 屏幕微震动
         canvas.style.transform = `translate(${(Math.random() - 0.5) * 3}px, ${(Math.random() - 0.5) * 3}px)`;
     } else if (!isNearDeath) {
         canvas.style.transform = '';
@@ -2175,11 +2211,6 @@ function checkWin() {
     for (const key of TARGET)
         if (!snake.some(s => `${s.x},${s.y}` === key) && !spitBlocks.has(key)) return;
 
-    const all = new Set();
-    snake.forEach(s => all.add(`${s.x},${s.y}`));
-    spitBlocks.forEach((_, k) => all.add(k));
-    for (const key of all) if (!TARGET.has(key)) return;
-
     gameOver = true; gameFailed = false;
     triggerCelebration();
 }
@@ -2220,11 +2251,11 @@ function gameLoop(time) {
     // 濒死心跳音效
     if (!gameOver && !fx.celebrating && audioReady) {
         const lv = LEVELS[currentLevel];
-        const hbNearDeath = currentLevel >= 1 && (
-            (lv.maxSteps && lv.maxSteps - steps <= 10) ||
-            (lv.timeLimit && timeRemaining <= 10)
+        const hbNearDeath = (
+            (lv.maxSteps && steps >= lv.maxSteps * 0.8) ||
+            (lv.timeLimit && timeRemaining <= lv.timeLimit * 0.2)
         );
-        if (hbNearDeath && time - lastHeartbeatTime > 1000) {
+        if (hbNearDeath && time - lastHeartbeatTime > 500) {
             sound.playHeartbeat(true);
             lastHeartbeatTime = time;
         }
