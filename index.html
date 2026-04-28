@@ -387,6 +387,79 @@
         .overlay .btn-retry { background: #e94560; }
         .overlay .btn-home { background: #333; border: 1px solid #666; }
 
+        /* ===== 暂停弹层 ===== */
+        #pauseOverlay {
+            z-index: 110;
+        }
+        #pauseOverlay .pause-card {
+            background: rgba(30,27,36,0.96);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 28px 20px 20px;
+            max-width: 260px;
+            width: 75%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        #pauseOverlay .pause-card h2 {
+            font-size: 36px; margin: 0; color: #fff; line-height: 1;
+        }
+        #pauseOverlay .pause-card .pause-btns {
+            display: flex; gap: 10px; width: 100%;
+        }
+        #pauseOverlay .pause-card .pause-btns button {
+            flex: 1; min-width: 0; height: 44px;
+            border: none; border-radius: 12px;
+            font-size: 15px; font-weight: bold; cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: transform 0.12s;
+            padding: 0 8px;
+        }
+        #pauseOverlay .pause-card .pause-btns button:active { transform: scale(0.95); }
+        #pauseOverlay .pause-card .pause-btns .btn-next {
+            background: #4ecca3; color: #0f0f1a;
+        }
+        #pauseOverlay .pause-card .pause-btns .btn-home {
+            background: #444; color: #fff; border: 1px solid #666;
+        }
+
+        /* ===== 关卡锁定 ===== */
+        .lv-btn.locked {
+            opacity: 0.5;
+            background: #444 !important;
+            color: #888 !important;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        /* ===== 横屏提示 ===== */
+        #landscapeOverlay {
+            z-index: 300;
+            background: rgba(0,0,0,0.95);
+        }
+        #landscapeOverlay .landscape-icon {
+            font-size: 64px; margin-bottom: 16px;
+            animation: rotatePhone 2s ease-in-out infinite;
+        }
+        @keyframes rotatePhone {
+            0%,100% { transform: rotate(0deg); }
+            50% { transform: rotate(90deg); }
+        }
+        #landscapeOverlay p {
+            color: #fff; font-size: 18px; text-align: center;
+            font-family: 'PingFang SC','Microsoft YaHei',Arial,sans-serif;
+            padding: 0 24px; line-height: 1.6;
+        }
+        @media (orientation: landscape) and (max-height: 500px) {
+            #landscapeOverlay { display: flex; }
+        }
+        @media (orientation: portrait), (min-height: 501px) {
+            #landscapeOverlay { display: none; }
+        }
+
         .poster-wrapper {
             display: flex;
             flex-direction: column;
@@ -591,10 +664,19 @@
             .tutorial-hint { font-size: 14px; }
         }
 
+        /* ===== 响应式适配 ===== */
         @media (max-height: 700px) {
             .pocket-shell { padding: 16px 16px 24px; }
             .dpad { transform: scale(0.85); }
             .action-buttons { transform: rotate(-15deg) scale(0.9); }
+        }
+        @media (max-height: 600px) {
+            .pocket-shell { padding: 10px 12px 16px; }
+            .dpad { transform: scale(0.7); }
+            .action-buttons { transform: rotate(-15deg) scale(0.75); }
+            .screen-bezel { padding: 8px; }
+            .shell-brand { font-size: 11px; margin-bottom: 8px; }
+            .shell-top { margin-bottom: 4px; }
         }
         @media (max-width: 400px) {
             .pocket-shell { padding: 14px 12px 10px; }
@@ -603,6 +685,24 @@
             .action-buttons { transform: rotate(-15deg) scale(0.8); }
             .screen-stats { font-size: 9px; }
             .screen-stats .num { font-size: 11px; min-width: 16px; }
+        }
+        @media (max-width: 360px) {
+            .pocket-shell { padding: 10px 8px 8px; }
+            .dpad { transform: scale(0.65); }
+            .action-buttons { transform: rotate(-15deg) scale(0.7); }
+            .screen-bezel { padding: 6px; }
+            .shell-brand { font-size: 10px; letter-spacing: 2px; margin-bottom: 6px; }
+            #gameCanvas { border-radius: 4px; }
+            .controls-area { margin-top: 4px; padding: 0 4px; }
+        }
+        @media (max-width: 320px) {
+            .dpad { transform: scale(0.55); }
+            .action-buttons { transform: rotate(-15deg) scale(0.6); }
+            .screen-stats .num { font-size: 10px; min-width: 14px; }
+            .shell-hint { font-size: 8px; bottom: 4px; }
+        }
+        @media (min-width: 481px) {
+            .pocket-shell { margin: 0 auto; }
         }
     </style>
 </head>
@@ -763,6 +863,23 @@
             <button class="tut-start" id="tutorialStart">开始挑战</button>
         </div>
     </div>
+</div>
+
+<!-- 暂停弹层 -->
+<div class="overlay" id="pauseOverlay">
+    <div class="pause-card">
+        <h2>⏸</h2>
+        <div class="pause-btns">
+            <button id="pauseResumeBtn" class="btn-next">▶ 继续</button>
+            <button id="pauseRestartBtn" class="btn-home">↻ 重来</button>
+        </div>
+    </div>
+</div>
+
+<!-- 横屏提示 -->
+<div class="overlay" id="landscapeOverlay">
+    <div class="landscape-icon">📱</div>
+    <p>请将设备旋转为竖屏<br>获得最佳体验</p>
 </div>
 
 <!-- 隐藏的 spitBtn（供 JS 逻辑引用） -->
@@ -1293,6 +1410,54 @@ class SoundSynth {
 const sound = new SoundSynth();
 let audioReady = false;
 
+// ========== 弹层统一管理 ==========
+function hideAllOverlays() {
+    document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'));
+}
+
+function showOverlay(id) {
+    hideAllOverlays();
+    const el = document.getElementById(id);
+    if (el) el.classList.add('show');
+}
+
+// ========== 进度存档 ==========
+const STORAGE_KEY = 'snake_unlock';
+
+function getUnlockedLevel() {
+    // TODO: 上线后恢复关卡锁定逻辑，目前全部解锁方便测试
+    return 99;
+    // try {
+    //     const val = localStorage.getItem(STORAGE_KEY);
+    //     return val ? parseInt(val, 10) : 0;
+    // } catch (_) { return 0; }
+}
+
+function saveUnlockedLevel(level) {
+    try {
+        const current = getUnlockedLevel();
+        if (level > current) {
+            localStorage.setItem(STORAGE_KEY, String(level));
+        }
+    } catch (_) {}
+}
+
+function updateLevelSelectUI() {
+    const unlocked = getUnlockedLevel();
+    document.querySelectorAll('.lv-btn').forEach(btn => {
+        const idx = parseInt(btn.dataset.level, 10);
+        if (idx <= unlocked) {
+            btn.classList.remove('locked');
+            btn.textContent = `第${idx+1}关`;
+            btn.disabled = false;
+        } else {
+            btn.classList.add('locked');
+            btn.textContent = `🔒 第${idx+1}关`;
+            btn.disabled = true;
+        }
+    });
+}
+
 // 初始化蛇形进度条 20 节
 (function() {
     const container = document.getElementById('snakeSegments');
@@ -1325,19 +1490,22 @@ setInterval(() => {
 // ========== 连续移动 ==========
 let lastMoveTime = 0;
 let lastMoveSucceeded = true;
-const MOVE_INTERVAL = 350;
+const MOVE_INTERVAL = 320;
+const MOVE_IMMEDIATE_GUARD = 20;
 
 const DIR_STR = {'0,-1':'UP','0,1':'DOWN','-1,0':'LEFT','1,0':'RIGHT'};
 const OPPOSITE = { UP:'DOWN', DOWN:'UP', LEFT:'RIGHT', RIGHT:'LEFT' };
 
 function setDirection(dx, dy) {
     if (gameOver || gamePaused || fx.celebrating) return;
-    const newKey = `${dx},${dy}`;
-    const curKey = `${dir.x},${dir.y}`;
-    if (OPPOSITE[DIR_STR[newKey]] === DIR_STR[curKey]) { sound.blocked(); return; }
+    // 检查是否为反向（180° 掉头）
+    const curStr = DIR_STR[`${dir.x},${dir.y}`];
+    const newStr = DIR_STR[`${dx},${dy}`];
+    if (curStr && newStr && OPPOSITE[newStr] === curStr) { sound.blocked(); return; }
     if (!gameStarted) { gameStarted = true; document.getElementById('startOverlay').classList.add('hidden'); }
     dir = {x: dx, y: dy};
     sound.glissando();
+    // 强制走一步：跳过时间守卫，让转向即时响应
     tryMove(true);
 }
 
@@ -1489,12 +1657,12 @@ function updateEffects() {
 function showLevelClear() {
     document.getElementById('winTitle').textContent = '🎉 天才！';
     document.getElementById('winTitle').className = 'win-title';
-    document.getElementById('winText').textContent = '准备迎接真正的挑战';
+    document.getElementById('winText').textContent = '准备迎接新的挑战';
     document.getElementById('winButtons').innerHTML = '';
-    document.getElementById('winOverlay').classList.add('show');
+    showOverlay('winOverlay');
     levelClearTimer = setTimeout(() => {
         if (document.getElementById('winOverlay').classList.contains('show')) {
-            document.getElementById('winOverlay').classList.remove('show');
+            hideAllOverlays();
             loadLevel(1, true);
             ensureAudio();
         }
@@ -1503,6 +1671,7 @@ function showLevelClear() {
 
 function showWinScreen() {
     const isLast = currentLevel >= LEVELS.length - 1;
+    saveUnlockedLevel(currentLevel + 1);
     document.getElementById('winTitle').textContent = isLast ? '全部通关!' : '通关!';
     document.getElementById('winTitle').className = isLast ? 'final-title' : 'win-title';
     document.getElementById('winText').textContent = `步数 ${steps} · 蛇长 ${snake.length}`;
@@ -1512,28 +1681,28 @@ function showWinScreen() {
     } else {
         btns.innerHTML = `<button class="btn-next" id="nextLevelBtn">下一关 →</button> <button class="btn-home" id="winRestartBtn">重来</button>`;
     }
-    document.getElementById('winOverlay').classList.add('show');
+    showOverlay('winOverlay');
     document.getElementById('nextLevelBtn')?.addEventListener('click', () => {
-        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel + 1, true); ensureAudio();
+        hideAllOverlays(); loadLevel(currentLevel + 1, true); ensureAudio();
     }, { once: true });
     document.getElementById('winRestartBtn')?.addEventListener('click', () => {
-        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel, true); ensureAudio();
+        hideAllOverlays(); loadLevel(currentLevel, true); ensureAudio();
     }, { once: true });
     document.getElementById('finalRestartBtn')?.addEventListener('click', () => {
-        document.getElementById('winOverlay').classList.remove('show'); loadLevel(0, true); ensureAudio();
+        hideAllOverlays(); loadLevel(0, true); ensureAudio();
     }, { once: true });
 }
 
 function showLoseScreen() {
     const remaining = getRemainingCells();
     document.getElementById('loseMessage').textContent = getFailMessage(remaining);
-    document.getElementById('loseOverlay').classList.add('show');
+    showOverlay('loseOverlay');
     sound.loseSound(); sound.stopBGM();
     clearInterval(timerInterval);
 }
 
 document.getElementById('retryBtn').addEventListener('click', () => {
-    document.getElementById('loseOverlay').classList.remove('show');
+    hideAllOverlays();
     loadLevel(currentLevel, true); ensureAudio();
 });
 
@@ -1723,24 +1892,24 @@ function getFailMessage(remaining) {
 
     const msgs = {
         wall: [
-            `墙就在那没动过，是你自己撞上去的。剩${r}格你打算用意念填？ (${f}/${total})`,
+            `墙就在那没动过，是你自己撞上去的。剩${r}格你打算用意念填吗？ (${f}/${total})`,
             `地图边界挺明显的吧？${r}格没收完就去怼墙，真有你的。 (${f}/${total})`,
-            `那堵墙已经拒绝了不知道多少个玩家了，你并不特殊。还剩${r}格。 (${f}/${total})`,
+            `那堵墙已经拒绝了不少玩家了，你并不特殊。还剩${r}格。 (${f}/${total})`,
         ],
         self: [
-            `你的蛇都被自己绕晕了。还有${r}格没填，它选择自我了断。 (${f}/${total})`,
-            `蛇咬尾，经典死循环。${r}格没收完就自尽，代码写得不错嘛。 (${f}/${total})`,
-            `你蛇宁可咬自己也不愿意继续爬了。${r}格，你自己反省一下。 (${f}/${total})`,
+            `蛇都被自己绕晕了，还有${r}格没填呢。 (${f}/${total})`,
+            `蛇咬尾，经典死循环。${r}格没收完就自尽。 (${f}/${total})`,
+            `宁可咬自己也不愿意继续爬了？${r}格，反省一下。 (${f}/${total})`,
         ],
         time: [
-            `时间到了。${r}格，差得不多，但你手速配不上你的野心。 (${f}/${total})`,
+            `时间到了。${r}格，差得不多，但你的手速配不上你的野心。 (${f}/${total})`,
             `我数到${r}的时候就不该再等你了。 (${f}/${total})`,
             `给你多久都不够用，${r}格是留着过年？ (${f}/${total})`,
         ],
         steps: [
-            `用了${steps}步，还剩${r}格。这规划能力，建议去做产品经理。 (${f}/${total})`,
+            `用了${steps}步，还剩${r}格。这规划能力，建议去当导游。 (${f}/${total})`,
             `${steps}步都没填满${r}格——你是在贪拉蛇里迷路了吗？ (${f}/${total})`,
-            `恭喜你获得${steps}步观光游称号，${r}格目标表示很失望。 (${f}/${total})`,
+            `恭喜你获得${steps}步观光游称号，${r}格目标表示很无奈。 (${f}/${total})`,
         ],
     };
     const pool = msgs[failReason] || msgs.steps;
@@ -1777,6 +1946,7 @@ function showSettleScreen(won) {
     const timeUsed = level.timeLimit ? level.timeLimit - timeRemaining : 0;
     const title = getTitle(pct);
 
+    if (won) saveUnlockedLevel(currentLevel + 1);
     document.getElementById('settleTitle').textContent = won ? '🎉 通关！' : '😵 挑战失败';
     document.getElementById('settleTitle').className = won ? 'win-title' : 'lose-title';
     document.getElementById('settleBadge').textContent = title;
@@ -1803,19 +1973,19 @@ function showSettleScreen(won) {
     document.getElementById('settleOverlay').classList.add('show');
 
     document.getElementById('settleNextBtn')?.addEventListener('click', () => {
-        document.getElementById('settleOverlay').classList.remove('show');
+        hideAllOverlays();
         loadLevel(currentLevel + 1, true);
         ensureAudio();
     }, { once: true });
 
     document.getElementById('settleRestartBtn')?.addEventListener('click', () => {
-        document.getElementById('settleOverlay').classList.remove('show');
+        hideAllOverlays();
         loadLevel(currentLevel, true);
         ensureAudio();
     }, { once: true });
 
     document.getElementById('settleRetryBtn')?.addEventListener('click', () => {
-        document.getElementById('settleOverlay').classList.remove('show');
+        hideAllOverlays();
         loadLevel(currentLevel, true);
         ensureAudio();
     }, { once: true });
@@ -1831,11 +2001,11 @@ function showPoster(won) {
     const pc = generatePoster(remaining, won, pct, getTitle(pct), currentLevel);
     document.getElementById('posterImg').src = pc.toDataURL('image/png');
     document.getElementById('posterMessage').textContent = won ? '' : getFailMessage(remaining);
-    document.getElementById('posterOverlay').classList.add('show');
+    showOverlay('posterOverlay');
 }
 
 document.getElementById('posterRetry').addEventListener('click', () => {
-    document.getElementById('posterOverlay').classList.remove('show');
+    hideAllOverlays();
     loadLevel(currentLevel, true);
     ensureAudio();
 });
@@ -1843,21 +2013,23 @@ document.getElementById('posterRetry').addEventListener('click', () => {
 document.getElementById('posterShare').addEventListener('click', () => {
     const img = document.getElementById('posterImg');
     const a = document.createElement('a');
-    a.href = img.src; a.download = 'shapesnake.png';
+    a.href = img.src; a.download = '贪拉蛇_挑战结果.png';
     a.click();
 });
 
-// ========== 临时选关 ==========
+// ========== 选关 ==========
 document.getElementById('levelLabel').style.cursor = 'pointer';
 document.getElementById('levelLabel').addEventListener('click', () => {
-    document.getElementById('levelSelectOverlay').classList.add('show');
+    updateLevelSelectUI();
+    showOverlay('levelSelectOverlay');
 });
 document.querySelectorAll('.lv-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const idx = parseInt(btn.dataset.level);
-        document.getElementById('levelSelectOverlay').classList.remove('show');
+        const unlocked = getUnlockedLevel();
+        if (idx > unlocked) return;
+        hideAllOverlays();
         if (idx >= 0 && idx < LEVELS.length) {
-            document.querySelectorAll('.overlay.show').forEach(o => o.classList.remove('show'));
             clearInterval(timerInterval);
             if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
             loadLevel(idx, true);
@@ -1866,7 +2038,7 @@ document.querySelectorAll('.lv-btn').forEach(btn => {
     });
 });
 document.getElementById('levelSelectClose').addEventListener('click', () => {
-    document.getElementById('levelSelectOverlay').classList.remove('show');
+    hideAllOverlays();
 });
 
 // ========== 资源随机生成 ==========
@@ -1960,11 +2132,7 @@ function loadLevel(index, showStart) {
 
     fx.trail = []; fx.particles = []; fx.pulses = [];
     fx.shake = 0; fx.celebrating = false; fx.celebTimer = 0; fx.flashAlpha = 0;
-    document.getElementById('winOverlay').classList.remove('show');
-    document.getElementById('loseOverlay').classList.remove('show');
-    document.getElementById('posterOverlay').classList.remove('show');
-    document.getElementById('settleOverlay').classList.remove('show');
-    document.getElementById('levelSelectOverlay').classList.remove('show');
+    hideAllOverlays();
 
     document.getElementById('levelLabel').textContent = `第${index+1}关·${level.name}`;
     updateStats();
@@ -2105,6 +2273,16 @@ function draw() {
         (LEVELS[currentLevel].maxSteps && steps >= LEVELS[currentLevel].maxSteps * 0.8) ||
         (LEVELS[currentLevel].timeLimit && timeRemaining <= LEVELS[currentLevel].timeLimit * 0.2)
     );
+
+    // 平滑移动插值：让蛇身呈现滑行效果而非瞬移
+    let slideOx = 0, slideOy = 0;
+    if (!gameOver && !fx.celebrating && gameStarted && dir) {
+        const moveProgress = Math.min(1, (performance.now() - lastMoveTime) / MOVE_INTERVAL);
+        // 微偏移（5% 格），仅消除瞬移感，不产生漂移
+        slideOx = dir.x * moveProgress * CELL * 0.05;
+        slideOy = dir.y * moveProgress * CELL * 0.05;
+    }
+
     snake.forEach((seg, i) => {
         const isHead = i === 0;
         const pct = snake.length > 1 ? i / (snake.length - 1) : 0;
@@ -2113,7 +2291,10 @@ function draw() {
         ctx.shadowColor = '#e94560';
         ctx.shadowBlur = isHead ? 14 : 6;
         const pad = isHead ? 2 : 4;
-        const x = seg.x * CELL + pad, y = seg.y * CELL + pad;
+        // 每节蛇身加上滑行偏移（越靠近尾部偏移越小，产生拉伸感）
+        const tailFactor = 1 - pct * 0.6;
+        const x = seg.x * CELL + slideOx * tailFactor + pad;
+        const y = seg.y * CELL + slideOy * tailFactor + pad;
         const sz = CELL - pad * 2;
 
         if (isHead) {
@@ -2252,15 +2433,9 @@ function draw() {
     }
 
     if (gamePaused && gameStarted) {
-        ctx.fillStyle = 'rgba(0,0,0,0.4)';
-        ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 36px "Courier New",monospace';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText('⏸', LOGICAL_W / 2, LOGICAL_H / 2);
-        ctx.font = '14px "PingFang SC","Microsoft YaHei",Arial,sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.fillText('已暂停 · 点击继续', LOGICAL_W / 2, LOGICAL_H / 2 + 36);
+        if (!document.getElementById('pauseOverlay').classList.contains('show')) {
+            showOverlay('pauseOverlay');
+        }
     }
 
     // Floating combo texts
@@ -2291,7 +2466,9 @@ function draw() {
 function tryMove(immediate) {
     if (gameOver || fx.celebrating || !gameStarted) return;
     const now = performance.now();
-    if (now - lastMoveTime < (immediate ? 150 : MOVE_INTERVAL)) return;
+    const elapsed = now - lastMoveTime;
+    // 上次移动成功才限速；撞墙/撞身后允许立即转向
+    if (elapsed < (immediate ? MOVE_IMMEDIATE_GUARD : MOVE_INTERVAL) && lastMoveSucceeded) return;
     lastMoveTime = now;
 
     const head = snake[0];
@@ -2425,8 +2602,7 @@ function handleFail(reason) {
     safeVibrate(400);
     sound.loseSound(); sound.stopBGM();
     clearInterval(timerInterval);
-    if (currentLevel === 0) showLoseScreen();
-    else showSettleScreen(false);
+    showSettleScreen(false);
 }
 
 // ========== 渲染循环 ==========
@@ -2486,7 +2662,33 @@ document.getElementById('btnB').addEventListener('click', () => {
     if (!gameOver && gameStarted) {
         gamePaused = !gamePaused;
         document.getElementById('btnB').querySelector('.label').textContent = gamePaused ? '继续' : '暂停';
+        if (gamePaused) {
+            showOverlay('pauseOverlay');
+        } else {
+            hideAllOverlays();
+        }
     }
+});
+
+// 暂停弹层按钮
+document.getElementById('pauseOverlay').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+        gamePaused = false;
+        document.getElementById('btnB').querySelector('.label').textContent = '暂停';
+        hideAllOverlays();
+    }
+});
+document.getElementById('pauseResumeBtn').addEventListener('click', () => {
+    gamePaused = false;
+    document.getElementById('btnB').querySelector('.label').textContent = '暂停';
+    hideAllOverlays();
+});
+document.getElementById('pauseRestartBtn').addEventListener('click', () => {
+    gamePaused = false;
+    document.getElementById('btnB').querySelector('.label').textContent = '暂停';
+    hideAllOverlays();
+    loadLevel(currentLevel, true);
+    ensureAudio();
 });
 
 // Start button
@@ -2509,11 +2711,13 @@ document.querySelector('.pocket-shell').addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
     const dist = Math.hypot(dx, dy);
-    if (dist < 15) {
+    if (dist < 10) {
+        // 点按 → 双击吐块检测
         const now = Date.now();
         if (now - lastTapTime < 350) { spit(); lastTapTime = 0; }
         else lastTapTime = now;
-    } else if (dist > 20) {
+    } else if (dist >= 10) {
+        // 滑动转向：阈值降低到 10px，消除死区
         if (Math.abs(dx) > Math.abs(dy)) setDirection(dx > 0 ? 1 : -1, 0);
         else setDirection(0, dy > 0 ? 1 : -1);
     }
@@ -2802,17 +3006,31 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
 
     function startGame() {
         if (tutAnimId) { cancelAnimationFrame(tutAnimId); tutAnimId = null; }
-        tOverlay.classList.remove('show');
+        hideAllOverlays();
         loadLevel(0, true);
         ensureAudio();
     }
 
-    // 事件绑定
-    tCanvas.addEventListener('dblclick', userAction);
-    tCanvas.addEventListener('click', userAction);
+    // 事件绑定 — 使用双击 / 双次触摸检测，避免 dblclick 在移动端不兼容
+    let tutLastTapTime = 0;
+    tCanvas.addEventListener('click', () => {
+        const now = Date.now();
+        if (now - tutLastTapTime < 400) {
+            userAction();
+            tutLastTapTime = 0;
+        } else {
+            tutLastTapTime = now;
+        }
+    });
     tCanvas.addEventListener('touchend', e => {
         e.preventDefault();
-        userAction();
+        const now = Date.now();
+        if (now - tutLastTapTime < 400) {
+            userAction();
+            tutLastTapTime = 0;
+        } else {
+            tutLastTapTime = now;
+        }
     }, {passive: false});
 
     tSkip.addEventListener('click', () => {
@@ -2832,8 +3050,24 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
     loop();
 })();
 
-loadLevel(0, true);
-requestAnimationFrame(gameLoop);
+// ========== 启动 ==========
+function initApp() {
+    loadLevel(0, true);
+    requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('load', () => {
+    try {
+        initApp();
+    } catch (error) {
+        console.error(error);
+        const fallback = document.createElement('div');
+        fallback.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0f0f12;color:#fff;font-size:18px;padding:24px;text-align:center;z-index:9999;font-family:"PingFang SC","Microsoft YaHei",Arial,sans-serif;';
+        fallback.textContent = '哎呀，出错了，请重启试试吧~';
+        document.body.innerHTML = '';
+        document.body.appendChild(fallback);
+    }
+});
 </script>
 </body>
 </html>
