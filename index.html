@@ -535,12 +535,15 @@
         .settle-stats .row {
             display: flex;
             justify-content: space-between;
-            font-size: 15px;
+            font-size: 14px;
             color: #a0a0b0;
+            gap: 8px;
         }
         .settle-stats .row .val {
             color: #fff;
             font-weight: bold;
+            text-align: right;
+            word-break: break-all;
         }
         .settle-stats .row .val.green { color: #4ecca3; }
         .settle-stats .row .val.red { color: #e94560; }
@@ -704,6 +707,121 @@
         @media (min-width: 481px) {
             .pocket-shell { margin: 0 auto; }
         }
+
+        /* ===== 星级评价 ===== */
+        .stars-display { display: inline-flex; gap: 2px; align-items: center; }
+        .stars-display .star { font-size: 14px; color: rgba(255,215,0,0.2); transition: color 0.3s; }
+        .stars-display .star.on { color: #ffd700; text-shadow: 0 0 6px rgba(255,215,0,0.4); }
+        .stars-display .star.half { position: relative; }
+        .stars-display .star.half::after { content:'★'; position:absolute; left:0; top:0; width:50%; overflow:hidden; color:#ffd700; text-shadow:0 0 6px rgba(255,215,0,0.4); }
+        .lv-best-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; margin-top: 2px; }
+        .lv-best-row .lv-best-score { font-size: 11px; color: rgba(255,255,255,0.45); }
+        .lv-best-row .lv-best-score .hi { color: #4ecca3; font-weight: bold; }
+
+        /* 结算大星星 */
+        .settle-stars { display: flex; gap: 6px; align-items: center; margin: 4px 0; }
+        .settle-stars .star { font-size: 32px; color: rgba(255,215,0,0.15); transition: all 0.4s cubic-bezier(0.175,0.885,0.32,1.275); }
+        .settle-stars .star.on { color: #ffd700; text-shadow: 0 0 12px rgba(255,215,0,0.6), 0 0 24px rgba(255,215,0,0.2); transform: scale(1.1); }
+        @keyframes starPop { 0% { transform: scale(0); opacity:0; } 60% { transform: scale(1.3); } 100% { transform: scale(1.1); opacity:1; } }
+        .settle-stars .star.on.pop { animation: starPop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards; }
+
+        /* 选关卡片 */
+        .level-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; width: 100%; }
+        .level-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 14px 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; touch-action: manipulation; transition: all 0.2s; }
+        .level-card:active { transform: scale(0.95); background: rgba(255,255,255,0.08); }
+        .level-card.locked { opacity: 0.4; cursor: not-allowed; }
+        .level-card.locked:active { transform: none; background: rgba(255,255,255,0.04); }
+        .level-card .lc-num { font-size: 18px; font-weight: bold; color: rgba(255,255,255,0.8); }
+        .level-card .lc-stars { display: flex; gap: 3px; }
+        .level-card .lc-stars .star { font-size: 16px; color: rgba(255,215,0,0.15); }
+        .level-card .lc-stars .star.on { color: #ffd700; text-shadow: 0 0 6px rgba(255,215,0,0.4); }
+        .level-card .lc-score { font-size: 10px; color: rgba(255,255,255,0.35); }
+        .level-card .lc-score .hi { color: #4ecca3; font-weight: bold; }
+
+        /* ===== 新纪录徽章 ===== */
+        .record-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: recPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-family: 'Courier New', monospace;
+        }
+        .record-badge.new-record {
+            background: linear-gradient(135deg, #ffd700, #ff6b35);
+            color: #1a1520;
+            box-shadow: 0 0 20px rgba(255,215,0,0.4);
+        }
+        .record-badge.no-record { color: rgba(255,255,255,0.3); }
+        @keyframes recPop {
+            0% { transform: scale(0); opacity: 0; }
+            60% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .settle-record-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 0 10px; min-height: 28px; }
+
+        /* ===== 模式选择 ===== */
+        .mode-select-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+        }
+        .mode-card {
+            background: rgba(30,27,36,0.95);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 16px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            touch-action: manipulation;
+        }
+        .mode-card:active { transform: scale(0.97); background: rgba(40,37,46,0.95); }
+        .mode-card .mc-icon { font-size: 28px; flex-shrink: 0; width: 40px; text-align: center; }
+        .mode-card .mc-info { flex: 1; text-align: left; }
+        .mode-card .mc-title { font-size: 16px; font-weight: bold; color: #fff; }
+        .mode-card .mc-desc { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+        .mode-card .mc-best {
+            font-size: 11px;
+            color: #4ecca3;
+            margin-top: 2px;
+            font-weight: bold;
+        }
+        .mode-card .mc-arrow { font-size: 18px; color: rgba(255,255,255,0.2); flex-shrink: 0; }
+        .mode-card:hover { border-color: rgba(255,255,255,0.15); }
+
+        /* ===== 无尽模式 HUD ===== */
+        .endless-hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 2px;
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+        }
+        .endless-hud .eh-item { display: flex; align-items: center; gap: 3px; }
+        .endless-hud .eh-val { color: #ffd700; font-weight: bold; font-size: 13px; min-width: 18px; text-align: center; }
+
+        /* ===== 返回按钮（页面内） ===== */
+        .btn-back-home {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.5);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            touch-action: manipulation;
+        }
+        .btn-back-home:active { background: rgba(255,255,255,0.08); }
     </style>
 </head>
 <body>
@@ -751,6 +869,11 @@
             <div class="snake-bar-wrap" id="snakeBarWrap" style="margin:0">
                 <div class="snake-segments" id="snakeSegments"></div>
                 <div class="snake-pct" id="snakePct">0%</div>
+            </div>
+            <div class="endless-hud" id="endlessHud" style="display:none">
+                <div class="eh-item">🌊 <span class="eh-val" id="ehWaves">1</span></div>
+                <div class="eh-item">🧩 <span class="eh-val" id="ehCells">0</span></div>
+                <div class="eh-item">👣 <span class="eh-val" id="ehSteps">0/300</span></div>
             </div>
         </div>
 
@@ -824,16 +947,13 @@
 
 <div class="overlay" id="levelSelectOverlay">
     <div class="settle-box">
-        <h2 class="win-title" style="font-size:24px;margin-bottom:8px">🎮 选关</h2>
-        <p style="color:#888;font-size:13px;margin:0 0 14px">点击关卡直接跳转</p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-            <button class="btn-next lv-btn" data-level="0">第1关</button>
-            <button class="btn-next lv-btn" data-level="1">第2关</button>
-            <button class="btn-next lv-btn" data-level="2">第3关</button>
-            <button class="btn-next lv-btn" data-level="3">第4关</button>
-            <button class="btn-next lv-btn" data-level="4">第5关</button>
+        <h2 class="win-title" style="font-size:24px;margin-bottom:4px">🎮 选关</h2>
+        <p style="color:#888;font-size:12px;margin:0 0 12px" id="levelSelectSummary"></p>
+        <div class="level-cards" id="levelCards"></div>
+        <div style="display:flex;gap:8px;margin-top:14px;justify-content:center">
+            <button class="btn-home" id="levelSelectClose" style="min-width:100px">关闭</button>
+            <button class="btn-retry" id="levelSelectHome" style="min-width:100px;font-size:13px;height:44px;border:none;border-radius:12px;cursor:pointer;font-weight:bold;font-family:'Courier New',monospace;background:transparent;border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.5)">🏠 主页</button>
         </div>
-        <button class="btn-home" id="levelSelectClose" style="margin-top:14px;min-width:100px">关闭</button>
     </div>
 </div>
 
@@ -841,10 +961,17 @@
     <div class="settle-box">
         <h2 id="settleTitle" class="win-title">通关!</h2>
         <div class="settle-badge" id="settleBadge">🔥 炼狱幸存者</div>
+        <div id="settleStarsRow" class="settle-stars" style="display:none">
+            <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+        </div>
+        <div class="settle-record-row" id="settleRecordRow">
+            <span class="record-badge no-record" id="settleRecordBadge">—</span>
+        </div>
         <div class="settle-stats">
             <div class="row"><span>完成度</span><span class="val green" id="settleCompletion">0/0 (0%)</span></div>
             <div class="row"><span>步数</span><span class="val" id="settleSteps">0</span></div>
             <div class="row"><span>用时</span><span class="val" id="settleTime">--</span></div>
+            <div class="row" id="settleScoreRow" style="display:none"><span>得分</span><span class="val" id="settleScore" style="color:#ffd700">0</span></div>
         </div>
         <p class="settle-message" id="settleMessage"></p>
         <div class="btn-group" id="settleButtons"></div>
@@ -852,15 +979,55 @@
 </div>
 
 <!-- 交互教程 -->
-<div class="overlay show" id="tutorialOverlay">
+<div class="overlay" id="tutorialOverlay">
     <div class="tutorial-wrap">
         <div class="tut-brand">▶ 贪拉蛇 · 新手引导</div>
         <canvas id="tutorialCanvas"></canvas>
         <div class="tutorial-hint" id="tutorialHint"></div>
         <div class="tutorial-progress" id="tutorialProgress"></div>
         <div class="tutorial-btns">
-            <button class="tut-skip" id="tutorialSkip">跳过教程</button>
-            <button class="tut-start" id="tutorialStart">开始挑战</button>
+            <button class="tut-skip" id="tutorialSkip"></button>
+            <button class="tut-start" id="tutorialStart">继续</button>
+        </div>
+    </div>
+</div>
+
+<!-- 主菜单 -->
+<div class="overlay" id="mainMenuOverlay">
+    <div class="settle-box" style="gap:4px;padding:20px 16px 16px">
+        <h2 class="win-title" style="font-size:28px;margin-bottom:2px">🎮 贪拉蛇</h2>
+        <p style="color:rgba(255,255,255,0.3);font-size:11px;margin:0 0 10px">选择挑战模式</p>
+        <div class="mode-select-grid">
+            <div class="mode-card" id="modeStory">
+                <div class="mc-icon">🐍</div>
+                <div class="mc-info">
+                    <div class="mc-title">闯关模式</div>
+                    <div class="mc-desc">5个关卡，逐步挑战</div>
+                    <div class="mc-best" id="mmStoryBest"></div>
+                </div>
+                <div class="mc-arrow">→</div>
+            </div>
+            <div class="mode-card" id="modeSpeedRun">
+                <div class="mc-icon">⚡</div>
+                <div class="mc-info">
+                    <div class="mc-title">极限竞速</div>
+                    <div class="mc-desc">一口气打通所有关卡，挑战最快用时</div>
+                    <div class="mc-best" id="mmSpeedBest"></div>
+                </div>
+                <div class="mc-arrow">→</div>
+            </div>
+            <div class="mode-card" id="modeEndless">
+                <div class="mc-icon">♾</div>
+                <div class="mc-info">
+                    <div class="mc-title">无尽挑战</div>
+                    <div class="mc-desc">波次推进，极限生存</div>
+                    <div class="mc-best" id="mmEndlessBest"></div>
+                </div>
+                <div class="mc-arrow">→</div>
+            </div>
+        </div>
+        <div style="margin-top:10px;text-align:center">
+            <span style="font-size:11px;color:rgba(255,255,255,0.25);cursor:pointer;text-decoration:underline;text-underline-offset:2px" id="mmTutorial">📖 新手教程</span>
         </div>
     </div>
 </div>
@@ -991,6 +1158,24 @@ let lastSpitStep = -1;
 let timerInterval = null;
 let levelClearTimer = null;
 let failReason = '';
+
+// ========== 模式标记 ==========
+let gameSpeedRunMode = false;
+let gameEndlessMode = false;
+let speedRunStartTime = 0;
+let endlessWave = 0;
+let endlessCellsFilled = 0;
+let endlessTotalSteps = 0;
+let endlessWaveSteps = 0;
+let endlessWaveBudget = 0;
+const ENDLESS_BASE_STEPS = 50;
+const ENDLESS_STEPS_PER_WAVE = 3;
+const ENDLESS_STEPS_PER_TARGET = 6;
+const ENDLESS_MIN_TARGETS = 4;
+const ENDLESS_MAX_TARGETS = 12;
+const ENDLESS_TARGETS_PER_WAVE = 2;
+const ENDLESS_MIN_RESOURCES = 3;
+const ENDLESS_MAX_RESOURCES = 6;
 
 // ========== SoundSynth ==========
 class SoundSynth {
@@ -1444,18 +1629,364 @@ function saveUnlockedLevel(level) {
 
 function updateLevelSelectUI() {
     const unlocked = getUnlockedLevel();
-    document.querySelectorAll('.lv-btn').forEach(btn => {
-        const idx = parseInt(btn.dataset.level, 10);
-        if (idx <= unlocked) {
-            btn.classList.remove('locked');
-            btn.textContent = `第${idx+1}关`;
-            btn.disabled = false;
+    const scores = getLevelScores();
+    const container = document.getElementById('levelCards');
+    if (!container) return;
+    container.innerHTML = '';
+
+    // 总星数汇总
+    const totalStars = Object.values(scores).reduce((sum, s) => sum + (s.stars || 0), 0);
+    const maxStars = LEVELS.length * 3;
+    const summaryEl = document.getElementById('levelSelectSummary');
+    if (summaryEl) summaryEl.textContent = `⭐ ${totalStars} / ${maxStars}`;
+
+    LEVELS.forEach((lv, idx) => {
+        const card = document.createElement('div');
+        card.className = 'level-card';
+        card.dataset.level = idx;
+
+        const isUnlocked = idx <= unlocked;
+        if (!isUnlocked) {
+            card.classList.add('locked');
+            card.innerHTML = `<span class="lc-num">🔒</span><span class="lc-stars">${'<span class="star">★</span>'.repeat(3)}</span><span class="lc-score">第${idx+1}关</span>`;
         } else {
-            btn.classList.add('locked');
-            btn.textContent = `🔒 第${idx+1}关`;
-            btn.disabled = true;
+            const score = scores[String(idx)];
+            if (idx === 0) {
+                // 第一关不显示星星
+                card.innerHTML = `<span class="lc-num">${idx+1}</span><span class="lc-score" style="color:rgba(255,255,255,0.5)">闯关模式</span>`;
+            } else {
+                const starCount = (score && score.stars) || 0;
+                const starsHtml = [1,2,3].map(s => `<span class="star${s <= starCount ? ' on' : ''}">★</span>`).join('');
+                const scoreHtml = (score && score.bestScore) ? `<span class="lc-score"><span class="hi">${score.bestScore}</span> 分</span>` : '<span class="lc-score">未挑战</span>';
+                card.innerHTML = `<span class="lc-num">${idx+1}</span><span class="lc-stars">${starsHtml}</span>${scoreHtml}`;
+            }
         }
+
+        card.addEventListener('click', () => {
+            if (!isUnlocked) return;
+            hideAllOverlays();
+            if (idx >= 0 && idx < LEVELS.length) {
+                clearInterval(timerInterval);
+                if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
+                loadLevel(idx, true);
+                ensureAudio();
+            }
+        });
+
+        container.appendChild(card);
     });
+}
+
+// ========== 分数记录系统 ==========
+const SCORE_KEY = 'snake_scores';
+const SPEEDRUN_KEY = 'snake_speedrun';
+const ENDLESS_KEY = 'snake_endless';
+
+function getLevelScores() {
+    try {
+        return JSON.parse(localStorage.getItem(SCORE_KEY)) || {};
+    } catch (_) { return {}; }
+}
+
+function calculateStars(pct, steps, maxSteps, timeUsed, timeLimit) {
+    let stars = 1;
+    if (pct >= 100) stars = 2;
+    if (pct >= 100) {
+        const stepRatio = maxSteps ? steps / maxSteps : 0.5;
+        const timeRatio = timeLimit ? timeUsed / timeLimit : 0.3;
+        if (stepRatio <= 0.45 && (!timeLimit || timeRatio <= 0.5)) stars = 3;
+    }
+    return stars;
+}
+
+function calculateScore(filled, total, steps, maxSteps, timeUsed, timeLimit) {
+    const pct = total > 0 ? filled / total : 0;
+    const coverageScore = pct * 100;
+    let stepBonus = 25;
+    if (maxSteps) {
+        const remaining = Math.max(0, maxSteps - steps);
+        stepBonus = (remaining / maxSteps) * 50;
+    }
+    let timeBonus = 25;
+    if (timeLimit) {
+        const remaining = Math.max(0, timeLimit - timeUsed);
+        timeBonus = (remaining / timeLimit) * 50;
+    }
+    return Math.round(coverageScore + stepBonus + timeBonus);
+}
+
+function saveLevelScore(levelIndex, newData) {
+    const scores = getLevelScores();
+    const key = String(levelIndex);
+    const prev = scores[key];
+    let isNew = false;
+    if (!prev || newData.bestScore > (prev.bestScore || 0)) {
+        isNew = true;
+    }
+    if (!prev) {
+        scores[key] = { ...newData };
+    } else {
+        scores[key] = {
+            bestPct: Math.max(prev.bestPct || 0, newData.bestPct),
+            bestScore: Math.max(prev.bestScore || 0, newData.bestScore),
+            bestSteps: prev.bestSteps ? Math.min(prev.bestSteps, newData.bestSteps) : newData.bestSteps,
+            bestTime: prev.bestTime !== undefined ? Math.min(prev.bestTime, newData.bestTime) : newData.bestTime,
+            stars: Math.max(prev.stars || 0, newData.stars),
+        };
+    }
+    try { localStorage.setItem(SCORE_KEY, JSON.stringify(scores)); } catch (_) {}
+    return { isNew, prevBest: prev };
+}
+
+// ========== 速通模式存档 ==========
+function getSpeedRunBest() {
+    try {
+        const v = localStorage.getItem(SPEEDRUN_KEY);
+        return v ? parseInt(v, 10) : null;
+    } catch (_) { return null; }
+}
+function saveSpeedRunBest(time) {
+    try {
+        const prev = getSpeedRunBest();
+        if (prev === null || time < prev) {
+            localStorage.setItem(SPEEDRUN_KEY, String(time));
+        }
+    } catch (_) {}
+}
+
+// ========== 无尽模式存档 ==========
+function getEndlessBest() {
+    try {
+        const raw = localStorage.getItem(ENDLESS_KEY);
+        if (!raw) return null;
+        const d = JSON.parse(raw);
+        return d.bestCells || null;
+    } catch (_) { return null; }
+}
+function saveEndlessBest(cells, waves) {
+    try {
+        const prev = getEndlessBest();
+        if (prev === null || cells > prev) {
+            localStorage.setItem(ENDLESS_KEY, JSON.stringify({ bestCells: cells, bestWaves: waves }));
+        }
+    } catch (_) {}
+}
+function getEndlessBestData() {
+    try {
+        const raw = localStorage.getItem(ENDLESS_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
+}
+
+// ========== 模式切换 ==========
+function exitSpecialMode() {
+    gameSpeedRunMode = false;
+    gameEndlessMode = false;
+    speedRunStartTime = 0;
+    endlessWave = 0;
+    endlessCellsFilled = 0;
+    endlessTotalSteps = 0;
+    endlessWaveSteps = 0;
+    endlessWaveBudget = 0;
+    const ehud = document.getElementById('endlessHud');
+    if (ehud) ehud.style.display = 'none';
+}
+
+function showMainMenu(skipBestUpdate) {
+    exitSpecialMode();
+    hideAllOverlays();
+    document.getElementById('mainMenuOverlay').classList.add('show');
+    if (!skipBestUpdate) updateMainMenuBests();
+}
+
+function showTutorial() {
+    hideAllOverlays();
+    const tOverlay = document.getElementById('tutorialOverlay');
+    tOverlay.classList.add('show');
+    window.dispatchEvent(new Event('resize'));
+}
+
+// ========== 速通模式 ==========
+function initSpeedRun() {
+    exitSpecialMode();
+    gameSpeedRunMode = true;
+    speedRunStartTime = Date.now();
+    hideAllOverlays();
+    loadLevel(0, true); // 显示开始按钮
+    ensureAudio();
+}
+
+// ========== 无尽模式 ==========
+function getEndlessTargets(gridSize, count) {
+    const targets = new Set();
+    const maxAttempts = 200;
+    while (targets.size < count && maxAttempts > 0) {
+        const r = Math.floor(Math.random() * (gridSize - 4)) + 2;
+        const c = Math.floor(Math.random() * (gridSize - 4)) + 2;
+        targets.add(`${c},${r}`);
+    }
+    return [...targets].map(k => k.split(',').map(Number));
+}
+
+function initEndlessMode() {
+    exitSpecialMode();
+    gameEndlessMode = true;
+    endlessWave = 0;
+    endlessCellsFilled = 0;
+    endlessTotalSteps = 0;
+    hideAllOverlays();
+
+    // 使用 12x12 网格
+    const gridSize = 12;
+    const GR = gridSize;
+
+    // 第一波参数
+    const targetCount = ENDLESS_MIN_TARGETS;
+    const resourceCount = ENDLESS_MIN_RESOURCES;
+    const firstTargets = getEndlessTargets(GR, targetCount);
+
+    // 无尽模式配置
+    const endlessLevel = {
+        name: '无尽',
+        grid: GR,
+        target: firstTargets.map(([c,r]) => [r,c]),
+        snake: [{x: Math.floor(GR/2), y: Math.floor(GR/2)}, {x: Math.floor(GR/2)-1, y: Math.floor(GR/2)}, {x: Math.floor(GR/2)-2, y: Math.floor(GR/2)}],
+        dir: {x: 1, y: 0},
+        timeLimit: 0,
+    };
+
+    currentLevel = -1; // 标记为无尽模式
+
+    // 初始化游戏
+    GRID = GR; CELL = Math.floor(480 / GR); COLS = GR; ROWS = GR;
+    LOGICAL_W = GR * CELL; LOGICAL_H = GR * CELL;
+    const dpr = window.devicePixelRatio || 1;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    canvas.width = LOGICAL_W * dpr; canvas.height = LOGICAL_H * dpr;
+    ctx.scale(dpr, dpr);
+
+    TARGET = new Set(endlessLevel.target.map(([r,c]) => `${c},${r}`));
+    snake = endlessLevel.snake.map(p => ({...p}));
+    dir = {...endlessLevel.dir};
+    steps = 0;
+    spitBlocks = new Map();
+    gameOver = false; gameFailed = false;
+    gameStarted = false; gamePaused = false;
+    document.getElementById('startOverlay').classList.remove('hidden');
+    lastMoveTime = 0; lastMoveSucceeded = true;
+    lastSpitStep = -1;
+    lastHeartbeatTime = 0;
+    timeRemaining = 0;
+
+    sound.stopBGM();
+    if (audioReady) sound.startBGM2(1.0, 800);
+
+    // 生成资源点
+    const resPositions = generateEndlessResources(GR, firstTargets, resourceCount);
+    resourceBlocks = new Map();
+    resPositions.forEach(([r,c]) => { resourceBlocks.set(`${c},${r}`, true); });
+
+    // 步数预算
+    endlessWaveSteps = 0;
+    endlessWaveBudget = ENDLESS_BASE_STEPS + targetCount * ENDLESS_STEPS_PER_TARGET;
+
+    fx.trail = []; fx.particles = []; fx.pulses = [];
+    fx.shake = 0; fx.celebrating = false; fx.celebTimer = 0; fx.flashAlpha = 0;
+
+    // 显示无尽 UI
+    document.getElementById('levelLabel').textContent = `♾ 无尽挑战 · 第${endlessWave + 1}波`;
+    const ehud = document.getElementById('endlessHud');
+    if (ehud) {
+        ehud.style.display = '';
+        document.getElementById('ehWaves').textContent = '1';
+        document.getElementById('ehCells').textContent = '0';
+        document.getElementById('ehSteps').textContent = `0/${endlessWaveBudget}`;
+    }
+    document.getElementById('snakeBarWrap').classList.remove('show');
+    document.getElementById('timerDisplay').style.display = 'none';
+
+    hideAllOverlays();
+    sound.reset();
+}
+
+function endlessNextWave() {
+    if (gameOver || fx.celebrating) return;
+
+    // 步数结转
+    const remainingSteps = Math.max(0, endlessWaveBudget - endlessWaveSteps);
+
+    endlessWave++;
+    endlessCellsFilled += TARGET.size;
+    const gridSize = GRID;
+
+    // 难度缩放
+    const targetCount = Math.min(ENDLESS_MIN_TARGETS + Math.floor(endlessWave * ENDLESS_TARGETS_PER_WAVE), ENDLESS_MAX_TARGETS);
+    const resourceCount = Math.min(ENDLESS_MIN_RESOURCES + Math.floor(endlessWave / 2), ENDLESS_MAX_RESOURCES);
+
+    // 生成新目标
+    const newTargets = getEndlessTargets(gridSize, targetCount);
+    spitBlocks = new Map();
+    TARGET = new Set(newTargets.map(([c,r]) => `${c},${r}`));
+
+    // 生成资源点
+    const resPositions = generateEndlessResources(gridSize, newTargets, resourceCount);
+    resourceBlocks = new Map();
+    const snakeKeys = new Set(snake.map(s => `${s.x},${s.y}`));
+    resPositions.forEach(([r,c]) => {
+        const key = `${c},${r}`;
+        if (!snakeKeys.has(key)) resourceBlocks.set(key, true);
+    });
+
+    // 步数预算（含结转）
+    const newBudget = ENDLESS_BASE_STEPS + endlessWave * ENDLESS_STEPS_PER_WAVE + targetCount * ENDLESS_STEPS_PER_TARGET;
+    endlessWaveBudget = newBudget + remainingSteps;
+    endlessWaveSteps = 0;
+
+    // 重设状态
+    steps = 0;
+    gameOver = false; gameFailed = false;
+    gamePaused = false;
+    lastMoveTime = 0; lastMoveSucceeded = true;
+    lastSpitStep = -1;
+
+    fx.particles = []; fx.pulses = [];
+    fx.celebrating = false; fx.celebTimer = 0; fx.flashAlpha = 0;
+
+    document.getElementById('levelLabel').textContent = `♾ 无尽挑战 · 第${endlessWave + 1}波`;
+    document.getElementById('ehWaves').textContent = String(endlessWave + 1);
+    document.getElementById('ehCells').textContent = String(endlessCellsFilled);
+    document.getElementById('ehSteps').textContent = `${endlessWaveSteps}/${endlessWaveBudget}`;
+
+    sound.success();
+    safeVibrate(100);
+    hideAllOverlays();
+}
+
+function endlessHandleFail(reason) {
+    failReason = reason || '';
+    gameOver = true; gameFailed = true;
+    safeVibrate(400);
+    sound.loseSound(); sound.stopBGM();
+    showSettleScreen(false);
+}
+
+function endlessCheckLose() {
+    if (endlessWaveSteps >= endlessWaveBudget) {
+        endlessHandleFail('steps');
+    }
+}
+
+// ========== 速通辅助 ==========
+function speedRunNextLevel() {
+    if (currentLevel + 1 >= LEVELS.length) {
+        // 已通关所有关卡，结算会处理
+        return;
+    }
+    hideAllOverlays();
+    loadLevel(currentLevel + 1, false);
+    ensureAudio();
+    document.getElementById('startOverlay').classList.add('hidden');
+    gameStarted = true;
 }
 
 // 初始化蛇形进度条 20 节
@@ -1490,7 +2021,7 @@ setInterval(() => {
 // ========== 连续移动 ==========
 let lastMoveTime = 0;
 let lastMoveSucceeded = true;
-const MOVE_INTERVAL = 320;
+const MOVE_INTERVAL = 380;
 const MOVE_IMMEDIATE_GUARD = 20;
 
 const DIR_STR = {'0,-1':'UP','0,1':'DOWN','-1,0':'LEFT','1,0':'RIGHT'};
@@ -1636,7 +2167,7 @@ function updateEffects() {
         }
         if (fx.celebTimer <= 0) {
             fx.celebrating = false;
-            if (currentLevel === 0 && LEVELS[currentLevel].stageClear === 'auto')
+            if (currentLevel === 0 && LEVELS[currentLevel].stageClear === 'auto' && !gameSpeedRunMode)
                 showLevelClear();
             else
                 showSettleScreen(true);
@@ -1942,21 +2473,68 @@ function showSettleScreen(won) {
     const total = TARGET.size;
     const filled = total - remaining;
     const pct = Math.round((filled / total) * 100);
-    const level = LEVELS[currentLevel];
-    const timeUsed = level.timeLimit ? level.timeLimit - timeRemaining : 0;
+    const isEndlessThis = gameEndlessMode || currentLevel < 0;
+    const level = isEndlessThis ? null : LEVELS[currentLevel];
+    const timeUsed = level ? (level.timeLimit ? level.timeLimit - timeRemaining : 0) : 0;
     const title = getTitle(pct);
 
-    if (won) saveUnlockedLevel(currentLevel + 1);
+    if (won && !isEndlessThis) saveUnlockedLevel(currentLevel + 1);
     document.getElementById('settleTitle').textContent = won ? '🎉 通关！' : '😵 挑战失败';
     document.getElementById('settleTitle').className = won ? 'win-title' : 'lose-title';
     document.getElementById('settleBadge').textContent = title;
     document.getElementById('settleCompletion').textContent = `${filled}/${total} (${pct}%)`;
-    document.getElementById('settleSteps').textContent = `${steps}${level.maxSteps ? ` / ${level.maxSteps}` : ''}`;
-    document.getElementById('settleTime').textContent = level.timeLimit ? `${timeUsed}s / ${level.timeLimit}s` : '--';
+    document.getElementById('settleSteps').textContent = `${steps}${level && level.maxSteps ? ` / ${level.maxSteps}` : ''}`;
+    document.getElementById('settleTime').textContent = level && level.timeLimit ? `${timeUsed}s / ${level.timeLimit}s` : '--';
+
+    // 分数记录与星级
+    const settleStarsRow = document.getElementById('settleStarsRow');
+    if (!isEndlessThis && !gameSpeedRunMode) {
+        const scoreVal = calculateScore(filled, total, steps, (level && level.maxSteps) || 0, timeUsed, (level && level.timeLimit) || 0);
+        const stars = calculateStars(pct, steps, (level && level.maxSteps) || 1, timeUsed, (level && level.timeLimit) || 0);
+        const scoreData = { bestPct: pct, bestScore: scoreVal, bestSteps: steps, bestTime: timeUsed, stars };
+        const result = saveLevelScore(currentLevel, scoreData);
+        const scoreRow = document.getElementById('settleScoreRow');
+        scoreRow.style.display = '';
+        document.getElementById('settleScore').textContent = String(scoreVal);
+
+        // 星星展示
+        if (won && settleStarsRow) {
+            settleStarsRow.style.display = '';
+            const starEls = settleStarsRow.querySelectorAll('.star');
+            starEls.forEach((el, i) => {
+                el.className = 'star';
+                if (i < stars) {
+                    setTimeout(() => {
+                        el.classList.add('on', 'pop');
+                    }, 200 + i * 250);
+                }
+            });
+        } else if (settleStarsRow) {
+            settleStarsRow.style.display = 'none';
+        }
+
+        const badge = document.getElementById('settleRecordBadge');
+        if (result.isNew && won) {
+            badge.className = 'record-badge new-record';
+            badge.textContent = '🏆 新纪录！';
+        } else if (result.prevBest) {
+            badge.className = 'record-badge no-record';
+            badge.textContent = `最佳 ${result.prevBest.bestScore || '—'}`;
+        } else {
+            badge.className = 'record-badge no-record';
+            badge.textContent = '记录待刷新';
+        }
+    } else {
+        document.getElementById('settleScoreRow').style.display = 'none';
+        if (settleStarsRow) settleStarsRow.style.display = 'none';
+        const badge = document.getElementById('settleRecordBadge');
+        badge.className = 'record-badge no-record';
+        badge.textContent = '—';
+    }
 
     const msgEl = document.getElementById('settleMessage');
     if (won) {
-        const remainSteps = level.maxSteps ? level.maxSteps - steps : 0;
+        const remainSteps = (level && level.maxSteps) ? level.maxSteps - steps : 0;
         const stepMsg = remainSteps > 0 ? `剩余步数 ${remainSteps} · ` : '';
         msgEl.textContent = `${stepMsg}${pct === 100 ? '完美通关！' : '干得漂亮！'}`;
     } else {
@@ -1964,7 +2542,38 @@ function showSettleScreen(won) {
     }
 
     const btns = document.getElementById('settleButtons');
-    if (won && currentLevel < LEVELS.length - 1) {
+    if (gameSpeedRunMode) {
+        if (won && currentLevel < LEVELS.length - 1) {
+            btns.innerHTML = `<button class="btn-next" id="settleNextBtn">下一关 →</button> <button class="btn-home" id="settleQuitBtn">退出速通</button>`;
+        } else {
+            // 速通结束
+            const totalTime = Math.round((Date.now() - speedRunStartTime) / 1000);
+            const bestTime = getSpeedRunBest();
+            let isNewBest = false;
+            if (bestTime === null || totalTime < bestTime) {
+                saveSpeedRunBest(totalTime);
+                isNewBest = true;
+            }
+            const timeMsg = isNewBest ? `🏆 新纪录！总用时 ${totalTime}s（上次 ${bestTime ? bestTime+'s' : '无'})` : `总用时 ${totalTime}s${bestTime !== null ? `（最佳 ${bestTime}s）` : ''}`;
+            document.getElementById('settleCompletion').textContent += `  ${timeMsg}`;
+            btns.innerHTML = `<button class="btn-next" id="settleQuitBtn">返回主页</button> <button class="btn-home" id="settleRetryBtn">重试速通</button>`;
+        }
+    } else if (gameEndlessMode) {
+        const best = getEndlessBest();
+        const wavesCleared = endlessWave;
+        const cellsFilled = endlessCellsFilled;
+        let endlessMsg = `完成 ${wavesCleared} 波 · 填充 ${cellsFilled} 格 · ${endlessTotalSteps} 步`;
+        let isNewBest = false;
+        if (cellsFilled > 0 && (best === null || cellsFilled > best)) {
+            saveEndlessBest(cellsFilled, wavesCleared);
+            isNewBest = true;
+            endlessMsg += ' 🏆 新纪录！';
+        } else if (best !== null) {
+            endlessMsg += `（最佳 ${best} 格）`;
+        }
+        document.getElementById('settleCompletion').textContent = endlessMsg;
+        btns.innerHTML = `<button class="btn-next" id="settleQuitBtn">返回主页</button> <button class="btn-home" id="settleRetryBtn">再来一局</button>`;
+    } else if (won && currentLevel < LEVELS.length - 1) {
         btns.innerHTML = `<button class="btn-next" id="settleNextBtn">下一关 →</button> <button class="btn-home" id="settleRestartBtn">重来</button>`;
     } else {
         btns.innerHTML = `<button class="btn-retry" id="settleRetryBtn">重试</button>`;
@@ -1974,6 +2583,10 @@ function showSettleScreen(won) {
 
     document.getElementById('settleNextBtn')?.addEventListener('click', () => {
         hideAllOverlays();
+        if (gameSpeedRunMode) {
+            speedRunNextLevel();
+            return;
+        }
         loadLevel(currentLevel + 1, true);
         ensureAudio();
     }, { once: true });
@@ -1986,8 +2599,16 @@ function showSettleScreen(won) {
 
     document.getElementById('settleRetryBtn')?.addEventListener('click', () => {
         hideAllOverlays();
+        if (gameEndlessMode) { initEndlessMode(); return; }
+        if (gameSpeedRunMode) { initSpeedRun(); return; }
         loadLevel(currentLevel, true);
         ensureAudio();
+    }, { once: true });
+
+    document.getElementById('settleQuitBtn')?.addEventListener('click', () => {
+        hideAllOverlays();
+        exitSpecialMode();
+        showMainMenu();
     }, { once: true });
 }
 
@@ -2020,25 +2641,24 @@ document.getElementById('posterShare').addEventListener('click', () => {
 // ========== 选关 ==========
 document.getElementById('levelLabel').style.cursor = 'pointer';
 document.getElementById('levelLabel').addEventListener('click', () => {
+    if (gameEndlessMode || gameSpeedRunMode) {
+        // 特殊模式中点击 → 直接返回主页
+        clearInterval(timerInterval);
+        sound.stopBGM();
+        showMainMenu();
+        return;
+    }
     updateLevelSelectUI();
     showOverlay('levelSelectOverlay');
 });
-document.querySelectorAll('.lv-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.level);
-        const unlocked = getUnlockedLevel();
-        if (idx > unlocked) return;
-        hideAllOverlays();
-        if (idx >= 0 && idx < LEVELS.length) {
-            clearInterval(timerInterval);
-            if (levelClearTimer) { clearTimeout(levelClearTimer); levelClearTimer = null; }
-            loadLevel(idx, true);
-            ensureAudio();
-        }
-    });
-});
 document.getElementById('levelSelectClose').addEventListener('click', () => {
     hideAllOverlays();
+});
+document.getElementById('levelSelectHome').addEventListener('click', () => {
+    hideAllOverlays();
+    clearInterval(timerInterval);
+    sound.stopBGM();
+    showMainMenu();
 });
 
 // ========== 资源随机生成 ==========
@@ -2075,6 +2695,30 @@ function generateResources(level) {
 
     const count = Math.min(level.resourceCount, candidates.length);
     return candidates.slice(0, count);
+}
+
+function generateEndlessResources(gridSize, targetPositions, count) {
+    const targetSet = new Set(targetPositions.map(([c,r]) => `${c},${r}`));
+    const snakeSet = new Set(snake.map(p => `${p.x},${p.y}`));
+    const spitSet = new Set(spitBlocks.keys());
+    const candidates = [];
+    for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+            const key = `${c},${r}`;
+            if (targetSet.has(key) || snakeSet.has(key) || spitSet.has(key)) continue;
+            let minDist = Infinity;
+            for (const [tr, tc] of targetPositions) {
+                const d = Math.abs(r - tr) + Math.abs(c - tc);
+                if (d < minDist) minDist = d;
+            }
+            if (minDist >= 1 && minDist <= 2) candidates.push([r, c]);
+        }
+    }
+    for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+    }
+    return candidates.slice(0, Math.min(count, candidates.length));
 }
 
 // ========== 游戏逻辑 ==========
@@ -2130,9 +2774,26 @@ function loadLevel(index, showStart) {
         }, 1000);
     }
 
+    // 速通模式显示累计时间
+    if (gameSpeedRunMode && speedRunStartTime > 0) {
+        const td = document.getElementById('timerDisplay');
+        td.style.display = '';
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if (!gameStarted) return;
+            const elapsed = Math.round((Date.now() - speedRunStartTime) / 1000);
+            document.getElementById('timerValue').textContent = elapsed;
+            td.className = elapsed > 120 ? 'timer-warn' : '';
+        }, 1000);
+    }
+
     fx.trail = []; fx.particles = []; fx.pulses = [];
     fx.shake = 0; fx.celebrating = false; fx.celebTimer = 0; fx.flashAlpha = 0;
     hideAllOverlays();
+
+    // 隐藏无尽 HUD
+    const ehud = document.getElementById('endlessHud');
+    if (ehud) ehud.style.display = 'none';
 
     document.getElementById('levelLabel').textContent = `第${index+1}关·${level.name}`;
     updateStats();
@@ -2140,13 +2801,15 @@ function loadLevel(index, showStart) {
 }
 
 function updateStats() {
-    const level = LEVELS[currentLevel];
+    const isEndless = currentLevel < 0 || gameEndlessMode;
+    const level = isEndless ? null : LEVELS[currentLevel];
+
     document.getElementById('steps').textContent = steps;
-    document.getElementById('stepsMax').textContent = level.maxSteps ? `/${level.maxSteps}` : '';
+    document.getElementById('stepsMax').textContent = level && level.maxSteps ? `/${level.maxSteps}` : '';
     document.getElementById('snakeLen').textContent = snake.length;
 
     const snakeWrap = document.getElementById('snakeBarWrap');
-    if (level.maxSteps) {
+    if (level && level.maxSteps) {
         snakeWrap.classList.add('show');
         const pct = Math.min(100, (steps / level.maxSteps) * 100);
         const filled = Math.round((pct / 100) * 20);
@@ -2161,7 +2824,9 @@ function updateStats() {
     }
 
     const td = document.getElementById('timerDisplay');
-    if (level.timeLimit) {
+    if (gameSpeedRunMode) {
+        // 速通模式下由独立定时器控制，不做隐藏
+    } else if (level && level.timeLimit) {
         td.style.display = '';
         document.getElementById('timerValue').textContent = timeRemaining;
         td.className = timeRemaining <= 10 ? 'timer-warn' : '';
@@ -2269,19 +2934,11 @@ function draw() {
         ctx.restore();
     });
 
-    const isNearDeath = gameStarted && !gameOver && (
-        (LEVELS[currentLevel].maxSteps && steps >= LEVELS[currentLevel].maxSteps * 0.8) ||
-        (LEVELS[currentLevel].timeLimit && timeRemaining <= LEVELS[currentLevel].timeLimit * 0.2)
+    const lv = LEVELS[currentLevel];
+    const isNearDeath = !gameEndlessMode && gameStarted && !gameOver && lv && (
+        (lv.maxSteps && steps >= lv.maxSteps * 0.8) ||
+        (lv.timeLimit && timeRemaining <= lv.timeLimit * 0.2)
     );
-
-    // 平滑移动插值：让蛇身呈现滑行效果而非瞬移
-    let slideOx = 0, slideOy = 0;
-    if (!gameOver && !fx.celebrating && gameStarted && dir) {
-        const moveProgress = Math.min(1, (performance.now() - lastMoveTime) / MOVE_INTERVAL);
-        // 微偏移（5% 格），仅消除瞬移感，不产生漂移
-        slideOx = dir.x * moveProgress * CELL * 0.05;
-        slideOy = dir.y * moveProgress * CELL * 0.05;
-    }
 
     snake.forEach((seg, i) => {
         const isHead = i === 0;
@@ -2291,10 +2948,8 @@ function draw() {
         ctx.shadowColor = '#e94560';
         ctx.shadowBlur = isHead ? 14 : 6;
         const pad = isHead ? 2 : 4;
-        // 每节蛇身加上滑行偏移（越靠近尾部偏移越小，产生拉伸感）
-        const tailFactor = 1 - pct * 0.6;
-        const x = seg.x * CELL + slideOx * tailFactor + pad;
-        const y = seg.y * CELL + slideOy * tailFactor + pad;
+        const x = seg.x * CELL + pad;
+        const y = seg.y * CELL + pad;
         const sz = CELL - pad * 2;
 
         if (isHead) {
@@ -2475,12 +3130,12 @@ function tryMove(immediate) {
     const nx = head.x + dir.x, ny = head.y + dir.y;
 
     if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) {
-        if (currentLevel >= 1) { safeVibrate(200); handleFail('wall'); return; }
+        if (currentLevel >= 1 || gameEndlessMode) { safeVibrate(200); handleFail('wall'); return; }
         if (lastMoveSucceeded) triggerShake(6);
         lastMoveSucceeded = false; return;
     }
     if (snake.slice(0, -1).some(s => s.x === nx && s.y === ny)) {
-        if (currentLevel >= 1) { safeVibrate(200); handleFail('self'); return; }
+        if (currentLevel >= 1 || gameEndlessMode) { safeVibrate(200); handleFail('self'); return; }
         if (lastMoveSucceeded) triggerShake(6);
         lastMoveSucceeded = false; return;
     }
@@ -2503,6 +3158,18 @@ function tryMove(immediate) {
     }
 
     steps++;
+    if (gameEndlessMode) {
+        endlessTotalSteps++;
+        endlessWaveSteps++;
+        const stepsEl = document.getElementById('ehSteps');
+        if (stepsEl) {
+            stepsEl.textContent = `${endlessWaveSteps}/${endlessWaveBudget}`;
+            const ratio = endlessWaveSteps / endlessWaveBudget;
+            if (ratio >= 0.9) stepsEl.style.color = '#e94560';
+            else if (ratio >= 0.7) stepsEl.style.color = '#ffd700';
+            else stepsEl.style.color = '';
+        }
+    }
     updateStats();
 
     if (TARGET.has(key)) {
@@ -2512,6 +3179,9 @@ function tryMove(immediate) {
 
     checkWin();
     if (!gameOver) checkLose();
+    if (gameEndlessMode && !gameOver && !fx.celebrating && endlessWaveSteps >= endlessWaveBudget) {
+        endlessHandleFail('steps');
+    }
 }
 
 function spit() {
@@ -2550,6 +3220,18 @@ function spit() {
         snake.splice(-spitCount, spitCount);
 
         steps++;
+        if (gameEndlessMode) {
+            endlessTotalSteps++;
+            endlessWaveSteps++;
+            const stepsEl = document.getElementById('ehSteps');
+            if (stepsEl) {
+                stepsEl.textContent = `${endlessWaveSteps}/${endlessWaveBudget}`;
+                const ratio = endlessWaveSteps / endlessWaveBudget;
+                if (ratio >= 0.9) stepsEl.style.color = '#e94560';
+                else if (ratio >= 0.7) stepsEl.style.color = '#ffd700';
+                else stepsEl.style.color = '';
+            }
+        }
         safeVibrate(30);
         triggerParticles(mid.x * CELL + CELL / 2, mid.y * CELL + CELL / 2, spitCount * 5, '#4ecca3', { spread: 3 });
         triggerPulse(mid.x, mid.y);
@@ -2559,6 +3241,18 @@ function spit() {
         spitBlocks.set(tailKey, { spitProgress: 0 });
         snake.pop();
         steps++;
+        if (gameEndlessMode) {
+            endlessTotalSteps++;
+            endlessWaveSteps++;
+            const stepsEl = document.getElementById('ehSteps');
+            if (stepsEl) {
+                stepsEl.textContent = `${endlessWaveSteps}/${endlessWaveBudget}`;
+                const ratio = endlessWaveSteps / endlessWaveBudget;
+                if (ratio >= 0.9) stepsEl.style.color = '#e94560';
+                else if (ratio >= 0.7) stepsEl.style.color = '#ffd700';
+                else stepsEl.style.color = '';
+            }
+        }
         safeVibrate(30);
         triggerParticles(tail.x * CELL + CELL / 2, tail.y * CELL + CELL / 2, 4, '#4ecca3', { spread: 2 });
         updateStats();
@@ -2581,17 +3275,26 @@ function spit() {
 
     checkWin();
     if (!gameOver) checkLose();
+    if (gameEndlessMode && !gameOver && !fx.celebrating && endlessWaveSteps >= endlessWaveBudget) {
+        endlessHandleFail('steps');
+    }
 }
 
 function checkWin() {
     for (const key of TARGET)
         if (!snake.some(s => `${s.x},${s.y}` === key) && !spitBlocks.has(key)) return;
 
+    if (gameEndlessMode) {
+        // 无尽模式：进入下一波
+        endlessNextWave();
+        return;
+    }
     gameOver = true; gameFailed = false;
     triggerCelebration();
 }
 
 function checkLose() {
+    if (gameEndlessMode) return; // 无尽模式由 endlessTotalSteps 控制
     const level = LEVELS[currentLevel];
     if (level.maxSteps && steps >= level.maxSteps) handleFail('steps');
 }
@@ -2624,13 +3327,19 @@ function gameLoop(time) {
     if (!gameOver && !gamePaused && !fx.celebrating) tryMove(false);
 
     // 濒死心跳音效
-    if (!gameOver && !fx.celebrating && audioReady) {
+    if (!gameOver && !fx.celebrating && audioReady && !gameEndlessMode) {
         const lv = LEVELS[currentLevel];
-        const hbNearDeath = (
+        const hbNearDeath = lv && (
             (lv.maxSteps && steps >= lv.maxSteps * 0.8) ||
             (lv.timeLimit && timeRemaining <= lv.timeLimit * 0.2)
         );
         if (hbNearDeath && time - lastHeartbeatTime > 500) {
+            sound.playHeartbeat(true);
+            lastHeartbeatTime = time;
+        }
+    }
+    if (!gameOver && !fx.celebrating && audioReady && gameEndlessMode) {
+        if (endlessWaveSteps >= endlessWaveBudget * 0.8 && time - lastHeartbeatTime > 500) {
             sound.playHeartbeat(true);
             lastHeartbeatTime = time;
         }
@@ -2642,6 +3351,21 @@ function gameLoop(time) {
 }
 
 // ========== 输入控制 ==========
+
+// 测试通关（开发用）
+function debugWin() {
+    if (gameOver || fx.celebrating) return;
+    // 让蛇覆盖所有目标格
+    const head = snake[0];
+    TARGET.forEach(key => {
+        const [cx, cy] = key.split(',').map(Number);
+        if (!snake.some(s => s.x === cx && s.y === cy) && !spitBlocks.has(key)) {
+            spitBlocks.set(key, true);
+        }
+    });
+    gameOver = true; gameFailed = false;
+    triggerCelebration();
+}
 document.addEventListener('keydown', e => {
     switch(e.key) {
         case 'ArrowUp': case 'w': case 'W': e.preventDefault(); setDirection(0, -1); break;
@@ -2649,6 +3373,7 @@ document.addEventListener('keydown', e => {
         case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); setDirection(-1, 0); break;
         case 'ArrowRight': case 'd': case 'D': e.preventDefault(); setDirection(1, 0); break;
         case ' ': case 'Enter': e.preventDefault(); spit(); break;
+        case '`': case '~': e.preventDefault(); debugWin(); break; // 测试通关
     }
 });
 
@@ -2700,6 +3425,65 @@ document.getElementById('startBtn').addEventListener('click', () => {
 
 // Hidden spitBtn for disabled-state logic
 document.getElementById('spitBtn').addEventListener('click', spit);
+
+// ========== 主菜单 ==========
+function updateMainMenuBests() {
+    const scores = getLevelScores();
+    const totalStars = Object.values(scores).reduce((sum, s) => sum + (s.stars || 0), 0);
+    const storyBest = document.getElementById('mmStoryBest');
+    const completedCount = Object.values(scores).filter(s => s.stars > 0).length;
+    storyBest.textContent = completedCount > 0 ? `⭐ ${totalStars} · ${completedCount}/5 关` : '还没有记录';
+
+    const speedBest = getSpeedRunBest();
+    document.getElementById('mmSpeedBest').textContent = speedBest !== null ? `最佳 ${speedBest}s` : '还没有记录';
+
+    const endlessData = getEndlessBestData();
+    document.getElementById('mmEndlessBest').textContent = endlessData ? `最佳 ${endlessData.bestCells} 格（${endlessData.bestWaves}波）` : '还没有记录';
+}
+
+document.getElementById('modeStory').addEventListener('click', () => {
+    hideAllOverlays();
+    loadLevel(0, true);
+    ensureAudio();
+});
+
+document.getElementById('modeSpeedRun').addEventListener('click', () => {
+    initSpeedRun();
+});
+
+document.getElementById('modeEndless').addEventListener('click', () => {
+    initEndlessMode();
+});
+
+document.getElementById('mmTutorial').addEventListener('click', () => {
+    hideAllOverlays();
+    document.getElementById('tutorialOverlay').classList.add('show');
+    window.dispatchEvent(new Event('resize'));
+});
+
+// 暂停弹层增加"返回主页"按钮
+document.getElementById('pauseRestartBtn').insertAdjacentHTML('afterend',
+    '<button class="btn-home" id="pauseHomeBtn" style="flex:1;min-width:0;height:44px;border:none;border-radius:12px;font-size:13px;font-weight:bold;cursor:pointer;font-family:\'Courier New\',monospace;background:#444;color:#fff;border:1px solid #666">🏠 主页</button>'
+);
+document.getElementById('pauseHomeBtn').addEventListener('click', () => {
+    gamePaused = false;
+    document.getElementById('btnB').querySelector('.label').textContent = '暂停';
+    hideAllOverlays();
+    clearInterval(timerInterval);
+    sound.stopBGM();
+    showMainMenu();
+});
+
+// 在开始按钮区域增加"返回"链接（用于故事模式外返回主页）
+document.getElementById('startOverlay').querySelector('.start-hint').insertAdjacentHTML('beforeend',
+    '<br><span style="font-size:11px;color:rgba(255,255,255,0.3);cursor:pointer" id="startToMenu">返回主页</span>'
+);
+document.getElementById('startToMenu').addEventListener('click', () => {
+    hideAllOverlays();
+    clearInterval(timerInterval);
+    sound.stopBGM();
+    showMainMenu();
+});
 
 let touchStartX = 0, touchStartY = 0, lastTapTime = 0;
 document.querySelector('.pocket-shell').addEventListener('touchstart', e => {
@@ -2978,10 +3762,11 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
     }
 
     function loop() {
-        tick();
-        draw();
-        if (tOverlay.classList.contains('show'))
-            tutAnimId = requestAnimationFrame(loop);
+        if (tOverlay.classList.contains('show')) {
+            tick();
+            draw();
+        }
+        tutAnimId = requestAnimationFrame(loop);
     }
 
     function userAction() {
@@ -3006,8 +3791,9 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
 
     function startGame() {
         if (tutAnimId) { cancelAnimationFrame(tutAnimId); tutAnimId = null; }
-        hideAllOverlays();
-        loadLevel(0, true);
+        // 显示主菜单而不是直接开始
+        showMainMenu();
+        updateMainMenuBests();
         ensureAudio();
     }
 
@@ -3052,8 +3838,10 @@ canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
 
 // ========== 启动 ==========
 function initApp() {
-    loadLevel(0, true);
+    // 后台加载初始关卡，但直接展示主菜单
+    loadLevel(0, false);
     requestAnimationFrame(gameLoop);
+    showMainMenu();
 }
 
 window.addEventListener('load', () => {
