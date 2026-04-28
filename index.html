@@ -622,11 +622,10 @@
         <div class="pixel-dot"></div>
     </div>
 
-    <div class="shell-brand">贪拉蛇·TANLA</div>
+    <div class="shell-brand">贪拉蛇</div>
 
     <div class="screen-bezel">
         <div class="screen-label">
-            <span>DOT MATRIX WITH STEREO SOUND</span>
             <div class="battery-led"></div>
         </div>
 
@@ -704,7 +703,7 @@
 </div>
 
 <div class="overlay" id="loseOverlay">
-    <h2 class="lose-title">GAME OVER</h2>
+    <h2 class="lose-title">挑战失败</h2>
     <p>游戏结束</p>
     <p id="loseMessage" class="fail-message"></p>
     <div class="btn-group">
@@ -755,7 +754,7 @@
 <!-- 交互教程 -->
 <div class="overlay show" id="tutorialOverlay">
     <div class="tutorial-wrap">
-        <div class="tut-brand">▶ 贪拉蛇 TUTORIAL</div>
+        <div class="tut-brand">▶ 贪拉蛇 · 新手引导</div>
         <canvas id="tutorialCanvas"></canvas>
         <div class="tutorial-hint" id="tutorialHint"></div>
         <div class="tutorial-progress" id="tutorialProgress"></div>
@@ -977,6 +976,23 @@ class SoundSynth {
             src.connect(ng);
             ng.connect(this.ctx.destination);
             src.start(t);
+        } catch (_) {}
+    }
+    blocked() {
+        if (!this.ctx) return;
+        try {
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(150, t);
+            osc.frequency.exponentialRampToValueAtTime(80, t + 0.08);
+            gain.gain.setValueAtTime(0.05, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.12);
         } catch (_) {}
     }
     winFanfare() {
@@ -1318,7 +1334,7 @@ function setDirection(dx, dy) {
     if (gameOver || gamePaused || fx.celebrating) return;
     const newKey = `${dx},${dy}`;
     const curKey = `${dir.x},${dir.y}`;
-    if (OPPOSITE[DIR_STR[newKey]] === DIR_STR[curKey]) return;
+    if (OPPOSITE[DIR_STR[newKey]] === DIR_STR[curKey]) { sound.blocked(); return; }
     if (!gameStarted) { gameStarted = true; document.getElementById('startOverlay').classList.add('hidden'); }
     dir = {x: dx, y: dy};
     sound.glissando();
@@ -1394,11 +1410,11 @@ function triggerCombo(count, positions) {
 
     let label, color, size, soundCount;
     if (count === 2) {
-        label = 'GOOD'; color = '#ffd700'; size = 24; soundCount = 2;
+        label = '不错'; color = '#ffd700'; size = 24; soundCount = 2;
     } else if (count === 3) {
-        label = 'GREAT'; color = '#00ffcc'; size = 26; soundCount = 3;
+        label = '漂亮'; color = '#00ffcc'; size = 26; soundCount = 3;
     } else {
-        label = 'PERFECT'; color = '#ff0055'; size = 32; soundCount = 4;
+        label = '完美'; color = '#ff0055'; size = 32; soundCount = 4;
     }
 
     floatingTexts.push({
@@ -1454,8 +1470,6 @@ function updateEffects() {
             fx.celebrating = false;
             if (currentLevel === 0 && LEVELS[currentLevel].stageClear === 'auto')
                 showLevelClear();
-            else if (currentLevel === LEVELS.length - 1)
-                showPoster(true);
             else
                 showSettleScreen(true);
         }
@@ -1481,7 +1495,7 @@ function showLevelClear() {
     levelClearTimer = setTimeout(() => {
         if (document.getElementById('winOverlay').classList.contains('show')) {
             document.getElementById('winOverlay').classList.remove('show');
-            loadLevel(1);
+            loadLevel(1, true);
             ensureAudio();
         }
     }, 1500);
@@ -1500,7 +1514,7 @@ function showWinScreen() {
     }
     document.getElementById('winOverlay').classList.add('show');
     document.getElementById('nextLevelBtn')?.addEventListener('click', () => {
-        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel + 1); ensureAudio();
+        document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel + 1, true); ensureAudio();
     }, { once: true });
     document.getElementById('winRestartBtn')?.addEventListener('click', () => {
         document.getElementById('winOverlay').classList.remove('show'); loadLevel(currentLevel, true); ensureAudio();
@@ -1790,7 +1804,7 @@ function showSettleScreen(won) {
 
     document.getElementById('settleNextBtn')?.addEventListener('click', () => {
         document.getElementById('settleOverlay').classList.remove('show');
-        loadLevel(currentLevel + 1);
+        loadLevel(currentLevel + 1, true);
         ensureAudio();
     }, { once: true });
 
@@ -2412,7 +2426,6 @@ function handleFail(reason) {
     sound.loseSound(); sound.stopBGM();
     clearInterval(timerInterval);
     if (currentLevel === 0) showLoseScreen();
-    else if (currentLevel === LEVELS.length - 1) showPoster(false);
     else showSettleScreen(false);
 }
 
