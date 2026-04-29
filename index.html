@@ -395,9 +395,9 @@
             background: rgba(30,27,36,0.96);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 20px;
-            padding: 28px 20px 20px;
-            max-width: 260px;
-            width: 75%;
+            padding: 28px 24px 20px;
+            max-width: 300px;
+            width: 85%;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -413,10 +413,11 @@
         #pauseOverlay .pause-card .pause-btns button {
             flex: 1; min-width: 0; height: 44px;
             border: none; border-radius: 12px;
-            font-size: 15px; font-weight: bold; cursor: pointer;
+            font-size: 14px; font-weight: bold; cursor: pointer;
             font-family: 'Courier New', monospace;
             transition: transform 0.12s;
             padding: 0 8px;
+            white-space: nowrap;
         }
         #pauseOverlay .pause-card .pause-btns button:active { transform: scale(0.95); }
         #pauseOverlay .pause-card .pause-btns .btn-next {
@@ -880,7 +881,7 @@
         <div style="position:relative">
             <canvas id="gameCanvas"></canvas>
             <div class="start-overlay" id="startOverlay">
-                <div class="start-btn" id="startBtn">开始游戏</div>
+                <div class="start-btn" id="startBtn">开始挑战</div>
                 <div class="start-hint">滑动屏幕转向 · 双击吐块 · 方向键也可以点哦~</div>
             </div>
         </div>
@@ -915,7 +916,7 @@
         <div class="speaker-line"></div>
     </div>
 
-    <div class="shell-hint">咬到自己游戏也会失败哦~</div>
+    <div class="shell-hint">咬到自己也会失败哦~</div>
 </div>
 
 <!-- Overlays -->
@@ -927,7 +928,7 @@
 
 <div class="overlay" id="loseOverlay">
     <h2 class="lose-title">挑战失败</h2>
-    <p>游戏结束</p>
+    <p>挑战结束</p>
     <p id="loseMessage" class="fail-message"></p>
     <div class="btn-group">
         <button class="btn-retry" id="retryBtn">再来一次</button>
