@@ -362,12 +362,12 @@
             z-index: 100;
         }
         .overlay.show { display: flex; }
-        .overlay h2 { font-size: 42px; margin-bottom: 6px; }
+        .overlay h2 { font-size: 32px; margin-bottom: 6px; }
         .overlay .win-title { color: #4ecca3; text-shadow: 0 0 40px rgba(78,204,163,0.5); }
         .overlay .lose-title { color: #e94560; text-shadow: 0 0 40px rgba(233,69,96,0.5); }
         .overlay .final-title { color: #ffd700; text-shadow: 0 0 50px rgba(255,215,0,0.5); }
         .overlay p { color: #a0a0b0; margin: 4px 0 20px; font-size: 16px; }
-        .overlay .fail-message { color: #ffd700; font-size: 18px; font-weight: bold; margin: 0 0 16px; text-shadow: 0 0 20px rgba(255,215,0,0.3); }
+        .overlay .fail-message { color: #ffd700; font-size: 13px; font-weight: bold; margin: 0 0 16px; text-shadow: 0 0 20px rgba(255,215,0,0.3); line-height: 1.4; word-break: break-all; text-align: center; padding: 0 12px; }
         .overlay .btn-group { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
         .overlay button {
             min-width: 140px;
@@ -541,11 +541,11 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.6);
         }
         .settle-badge {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: bold;
             color: #ffd700;
             text-shadow: 0 0 20px rgba(255,215,0,0.3);
-            padding: 6px 18px;
+            padding: 5px 14px;
             border: 1px solid rgba(255,215,0,0.2);
             border-radius: 30px;
             background: rgba(255,215,0,0.06);
@@ -569,16 +569,20 @@
             font-weight: bold;
             text-align: right;
             word-break: break-all;
+            overflow-wrap: break-word;
+            min-width: 0;
         }
         .settle-stats .row .val.green { color: #4ecca3; }
         .settle-stats .row .val.red { color: #e94560; }
         .settle-message {
-            font-size: 16px;
+            font-size: 13px;
             color: #ffd700;
             font-weight: bold;
             text-align: center;
             margin: 4px 0 10px;
-            min-height: 24px;
+            min-height: 20px;
+            line-height: 1.4;
+            word-break: break-all;
         }
 
         /* 隐藏的 spitBtn（供 JS disabled 逻辑使用） */
@@ -713,6 +717,11 @@
             .action-buttons { transform: rotate(-15deg) scale(0.8); }
             .screen-stats { font-size: 9px; }
             .screen-stats .num { font-size: 11px; min-width: 16px; }
+            .overlay h2 { font-size: 26px; }
+            .settle-badge { font-size: 15px; padding: 4px 10px; }
+            .settle-box { padding: 20px 16px 16px; gap: 6px; }
+            .settle-message { font-size: 12px; }
+            .settle-stats .row { font-size: 12px; }
         }
         @media (max-width: 360px) {
             .pocket-shell { padding: 10px 8px 8px; }
