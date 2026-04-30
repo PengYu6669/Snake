@@ -193,6 +193,26 @@
             transition: opacity 0.3s;
         }
         .start-overlay.hidden { opacity: 0; pointer-events: none; }
+        .event-banner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 6px;
+            z-index: 6;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .event-banner.show { opacity: 1; }
+        .eb-icon { font-size: 48px; line-height: 1; }
+        .eb-name { font-size: 24px; font-weight: bold; color: #fff; font-family: 'Courier New', monospace; }
+        .eb-desc { font-size: 14px; color: rgba(255,255,255,0.7); font-family: 'Courier New', monospace; }
+        .eh-event { font-size: 16px; }
         .start-btn {
             padding: 12px 40px;
             background: #e94560;
@@ -908,6 +928,7 @@
                 <div class="eh-item">🌊 <span class="eh-val" id="ehWaves">1</span></div>
                 <div class="eh-item">🧩 <span class="eh-val" id="ehCells">0</span></div>
                 <div class="eh-item">👣 <span class="eh-val" id="ehSteps">0/300</span></div>
+                <div class="eh-item eh-event" id="ehEvent" style="display:none"><span id="ehEventIcon"></span></div>
             </div>
         </div>
 
@@ -916,6 +937,11 @@
             <div class="start-overlay" id="startOverlay">
                 <div class="start-btn" id="startBtn">开始挑战</div>
                 <div class="start-hint">滑动屏幕转向 · 双击吐块 · 方向键也可以点哦~</div>
+            </div>
+            <div class="event-banner" id="eventBanner">
+                <div class="eb-icon" id="ebIcon"></div>
+                <div class="eb-name" id="ebName"></div>
+                <div class="eb-desc" id="ebDesc"></div>
             </div>
         </div>
     </div>
@@ -1270,7 +1296,26 @@ const ENDLESS_MIN_TARGETS = 4;
 const ENDLESS_MAX_TARGETS = 12;
 const ENDLESS_TARGETS_PER_WAVE = 2;
 const ENDLESS_MIN_RESOURCES = 3;
-const ENDLESS_MAX_RESOURCES = 6;
+const ENDLESS_MAX_RESOURCES = 8;
+
+// ========== 特殊事件波 ==========
+let currentEvent = null;
+let giftBlocks = new Map();
+// 💥 收缩波
+let shrinkBorder = 0;
+let shrinkTimer = 0;
+const SHRINK_INTERVAL = 12000; // 12秒（毫秒）
+// 🪞 镜像波
+let mirrorSnake = [];
+let mirrorAlive = false;
+const SPECIAL_EVENTS = ['reverse', 'speed', 'gift', 'shrink', 'mirror'];
+const EVENT_INFO = {
+    reverse: { icon: '🌀', name: '反向波', desc: '方向键反转！', color: '#a855f7' },
+    speed:   { icon: '⚡', name: '加速波', desc: '蛇加速了！', color: '#f59e0b' },
+    gift:    { icon: '🎁', name: '礼物波', desc: '收集星星获得步数！', color: '#ffd700' },
+    shrink:  { icon: '💥', name: '收缩波', desc: '安全区缩小，外圈变死亡区！', color: '#ef4444' },
+    mirror:  { icon: '🪞', name: '镜像波', desc: '镜像蛇出现，双倍填充！', color: '#38bdf8' },
+};
 
 // ========== SoundSynth ==========
 class SoundSynth {
@@ -1913,6 +1958,10 @@ function exitSpecialMode() {
     endlessTotalSteps = 0;
     endlessWaveSteps = 0;
     endlessWaveBudget = 0;
+    currentEvent = null;
+    giftBlocks = new Map();
+    shrinkBorder = 0; shrinkTimer = 0;
+    mirrorSnake = []; mirrorAlive = false;
     const ehud = document.getElementById('endlessHud');
     if (ehud) ehud.style.display = 'none';
 }
@@ -2037,6 +2086,23 @@ function initEndlessMode() {
     sound.reset();
 }
 
+function showEventBanner(event) {
+    const info = EVENT_INFO[event];
+    if (!info) return;
+    document.getElementById('ebIcon').textContent = info.icon;
+    document.getElementById('ebName').textContent = info.name;
+    document.getElementById('ebName').style.color = info.color;
+    document.getElementById('ebDesc').textContent = info.desc;
+    const banner = document.getElementById('eventBanner');
+    banner.classList.add('show');
+    gamePaused = true;
+    setTimeout(() => {
+        banner.classList.remove('show');
+        gamePaused = false;
+        lastMoveTime = performance.now();
+    }, 3000);
+}
+
 function endlessNextWave() {
     if (gameOver || fx.celebrating) return;
 
@@ -2047,9 +2113,15 @@ function endlessNextWave() {
     endlessCellsFilled += TARGET.size;
     const gridSize = GRID;
 
+    // 清理上一波事件状态
+    currentEvent = null;
+    giftBlocks = new Map();
+    shrinkBorder = 0; shrinkTimer = 0;
+    mirrorSnake = []; mirrorAlive = false;
+
     // 难度缩放
     const targetCount = Math.min(ENDLESS_MIN_TARGETS + Math.floor(endlessWave * ENDLESS_TARGETS_PER_WAVE), ENDLESS_MAX_TARGETS);
-    const resourceCount = Math.min(ENDLESS_MIN_RESOURCES + Math.floor(endlessWave / 2), ENDLESS_MAX_RESOURCES);
+    const resourceCount = targetCount;
 
     // 生成新目标
     const newTargets = getEndlessTargets(gridSize, targetCount);
@@ -2065,6 +2137,40 @@ function endlessNextWave() {
         if (!snakeKeys.has(key)) resourceBlocks.set(key, true);
     });
 
+    // 特殊事件波判定（第 0 波不算，之后每波触发）
+    if (endlessWave > 0) {
+        currentEvent = SPECIAL_EVENTS[Math.floor(Math.random() * SPECIAL_EVENTS.length)];
+        // 礼物波：生成 3 颗星星
+        if (currentEvent === 'gift') {
+            const giftCandidates = [];
+            const allKeys = new Set([...snakeKeys, ...resourceBlocks.keys(), ...TARGET]);
+            for (let r = 2; r < gridSize - 2; r++) {
+                for (let c = 2; c < gridSize - 2; c++) {
+                    const k = `${c},${r}`;
+                    if (!allKeys.has(k)) giftCandidates.push(k);
+                }
+            }
+            // Fisher-Yates shuffle
+            for (let i = giftCandidates.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [giftCandidates[i], giftCandidates[j]] = [giftCandidates[j], giftCandidates[i]];
+            }
+            for (let i = 0; i < Math.min(3, giftCandidates.length); i++) {
+                giftBlocks.set(giftCandidates[i], true);
+            }
+        }
+        // 💥 收缩波：初始化收缩状态
+        if (currentEvent === 'shrink') {
+            shrinkBorder = 0;
+            shrinkTimer = performance.now();
+        }
+        // 🪞 镜像波：根据当前蛇位置生成镜像蛇
+        if (currentEvent === 'mirror') {
+            mirrorSnake = snake.map(s => ({ x: COLS - 1 - s.x, y: ROWS - 1 - s.y }));
+            mirrorAlive = true;
+        }
+    }
+
     // 步数预算（含结转）
     const newBudget = ENDLESS_BASE_STEPS + endlessWave * ENDLESS_STEPS_PER_WAVE + targetCount * ENDLESS_STEPS_PER_TARGET;
     endlessWaveBudget = newBudget + remainingSteps;
@@ -2077,17 +2183,33 @@ function endlessNextWave() {
     lastMoveTime = 0; lastMoveSucceeded = true;
     lastSpitStep = -1;
 
+    // 蛇身裁剪：每波开始时裁回 3 节，避免蛇太长无法填满目标
+    if (snake.length > 3) snake.length = 3;
+
     fx.particles = []; fx.pulses = [];
     fx.celebrating = false; fx.celebTimer = 0; fx.flashAlpha = 0;
 
-    document.getElementById('levelLabel').textContent = `♾ 无尽挑战 · 第${endlessWave + 1}波`;
+    const eventLabel = currentEvent ? ` ${EVENT_INFO[currentEvent].icon} ${EVENT_INFO[currentEvent].name}` : '';
+    document.getElementById('levelLabel').textContent = `♾ 无尽挑战 · 第${endlessWave + 1}波${eventLabel}`;
     document.getElementById('ehWaves').textContent = String(endlessWave + 1);
     document.getElementById('ehCells').textContent = String(endlessCellsFilled);
     document.getElementById('ehSteps').textContent = `${endlessWaveSteps}/${endlessWaveBudget}`;
+    const ehEvent = document.getElementById('ehEvent');
+    if (currentEvent) {
+        ehEvent.style.display = '';
+        document.getElementById('ehEventIcon').textContent = EVENT_INFO[currentEvent].icon;
+    } else {
+        ehEvent.style.display = 'none';
+    }
 
     sound.success();
     safeVibrate(100);
-    hideAllOverlays();
+    if (currentEvent) {
+        hideAllOverlays();
+        showEventBanner(currentEvent);
+    } else {
+        hideAllOverlays();
+    }
 }
 
 function endlessHandleFail(reason) {
@@ -2157,6 +2279,8 @@ const OPPOSITE = { UP:'DOWN', DOWN:'UP', LEFT:'RIGHT', RIGHT:'LEFT' };
 
 function setDirection(dx, dy) {
     if (gameOver || gamePaused || fx.celebrating) return;
+    // 反向波：方向键取反
+    if (currentEvent === 'reverse') { dx = -dx; dy = -dy; }
     // 检查是否为反向（180° 掉头）
     const curStr = DIR_STR[`${dir.x},${dir.y}`];
     const newStr = DIR_STR[`${dx},${dy}`];
@@ -2985,6 +3109,13 @@ function draw() {
     const infernoPulse = isInferno ? Math.sin(t * 2.5) * 0.3 + 0.7 : 0;
     for (let r = 0; r < ROWS; r++)
         for (let c = 0; c < COLS; c++) {
+            // 💥 收缩波：死亡区格子变红
+            if (currentEvent === 'shrink' && (c < shrinkBorder || c >= COLS - shrinkBorder || r < shrinkBorder || r >= ROWS - shrinkBorder)) {
+                const rpulse = Math.sin(t * 3 + c * 0.5 + r * 0.5) * 10;
+                ctx.fillStyle = `rgb(${80 + rpulse|0}, ${10 + rpulse * 0.3|0}, ${10 + rpulse * 0.2|0})`;
+                ctx.fillRect(c * CELL, r * CELL, CELL, CELL);
+                continue;
+            }
             const b = (r + c) % 2 === 0 ? 26 : 22;
             if (isInferno) {
                 const rv = Math.min(255, (b * 1.5 + 18 * Math.sin(t * 2 + c * 0.4 + r * 0.4) + 10) | 0);
@@ -3000,6 +3131,7 @@ function draw() {
     TARGET.forEach(key => {
         const [cx, cy] = key.split(',').map(Number);
         const px = cx * CELL, py = cy * CELL;
+        const isFilled = snake.some(s => s.x === cx && s.y === cy) || spitBlocks.has(key) || mirrorSnake.some(s => s.x === cx && s.y === cy);
         ctx.fillStyle = `rgba(78, 204, 163, ${0.06 + pulseAlpha * 0.08})`;
         ctx.fillRect(px, py, CELL, CELL);
         ctx.strokeStyle = `rgba(78, 204, 163, ${pulseAlpha * 0.5})`;
@@ -3047,6 +3179,80 @@ function draw() {
         ctx.restore();
     });
 
+    // 🎁 礼物波：金色星星
+    giftBlocks.forEach((_, key) => {
+        const [cx, cy] = key.split(',').map(Number);
+        const cx2 = cx * CELL + CELL/2, cy2 = cy * CELL + CELL/2;
+        const starPulse = Math.sin(t * 5 + cx + cy) * 0.15 + 0.85;
+        ctx.save();
+        ctx.translate(cx2, cy2);
+        ctx.rotate(t * 0.5);
+        ctx.shadowColor = '#ffd700';
+        ctx.shadowBlur = 20 * starPulse;
+        const r = (CELL / 2 - 4) * starPulse;
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 4 * Math.PI / 5) - Math.PI / 2;
+            const method = i === 0 ? 'moveTo' : 'lineTo';
+            ctx[method](Math.cos(angle) * r, Math.sin(angle) * r);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * 4 * Math.PI / 5) - Math.PI / 2;
+            const method = i === 0 ? 'moveTo' : 'lineTo';
+            ctx[method](Math.cos(angle) * r * 0.5, Math.sin(angle) * r * 0.5);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+    });
+
+    // ⚡ 加速波：速度线
+    if (currentEvent === 'speed') {
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 8; i++) {
+            const ly = ((t * 200 + i * 67) % (LOGICAL_H + 40)) - 20;
+            const lx = (Math.sin(i * 2.7 + t) * 0.3 + 0.5) * LOGICAL_W;
+            ctx.beginPath();
+            ctx.moveTo(lx - 30, ly);
+            ctx.lineTo(lx + 30, ly);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
+    // 🌀 反向波：四角旋转箭头
+    if (currentEvent === 'reverse') {
+        const arrowColor = 'rgba(168, 85, 247, 0.6)';
+        const corners = [
+            { x: 18, y: 18, angle: 0 },
+            { x: LOGICAL_W - 18, y: 18, angle: Math.PI / 2 },
+            { x: LOGICAL_W - 18, y: LOGICAL_H - 18, angle: Math.PI },
+            { x: 18, y: LOGICAL_H - 18, angle: -Math.PI / 2 },
+        ];
+        ctx.save();
+        ctx.fillStyle = arrowColor;
+        corners.forEach(c => {
+            ctx.save();
+            ctx.translate(c.x, c.y);
+            ctx.rotate(c.angle + t * 2);
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(8, 4);
+            ctx.lineTo(0, 0);
+            ctx.lineTo(-8, 4);
+            ctx.closePath(); ctx.fill();
+            ctx.restore();
+        });
+        ctx.restore();
+    }
+
     spitBlocks.forEach((data, key) => {
         const [cx, cy] = key.split(',').map(Number);
         const px = cx * CELL, py = cy * CELL;
@@ -3070,9 +3276,13 @@ function draw() {
     });
 
     const lv = LEVELS[currentLevel];
-    const isNearDeath = !gameEndlessMode && gameStarted && !gameOver && lv && (
-        (lv.maxSteps && steps >= lv.maxSteps * 0.8) ||
-        (lv.timeLimit && timeRemaining <= lv.timeLimit * 0.2)
+    const isEndlessNearDeath = gameEndlessMode && gameStarted && !gameOver && endlessWaveSteps >= endlessWaveBudget * 0.8;
+    const isNearDeath = gameStarted && !gameOver && (
+        isEndlessNearDeath ||
+        (!gameEndlessMode && lv && (
+            (lv.maxSteps && steps >= lv.maxSteps * 0.8) ||
+            (lv.timeLimit && timeRemaining <= lv.timeLimit * 0.2)
+        ))
     );
 
     snake.forEach((seg, i) => {
@@ -3121,13 +3331,66 @@ function draw() {
     });
     TARGET.forEach(key => {
         const [cx, cy] = key.split(',').map(Number);
-        if (snake.some(s => s.x === cx && s.y === cy) || spitBlocks.has(key)) {
+        if (snake.some(s => s.x === cx && s.y === cy) || spitBlocks.has(key) || mirrorSnake.some(s => s.x === cx && s.y === cy)) {
             ctx.fillStyle = 'rgba(78,204,163,0.7)';
             ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText('✓', cx * CELL + CELL/2, cy * CELL + CELL/2 + 1);
         }
     });
+
+    // 🪞 镜像波：渲染镜像蛇
+    if (currentEvent === 'mirror' && mirrorAlive && mirrorSnake.length > 0) {
+        // 对称轴虚线
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 6]);
+        ctx.beginPath();
+        ctx.moveTo(LOGICAL_W / 2, 0);
+        ctx.lineTo(LOGICAL_W / 2, LOGICAL_H);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, LOGICAL_H / 2);
+        ctx.lineTo(LOGICAL_W, LOGICAL_H / 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        mirrorSnake.forEach((seg, i) => {
+            const isHead = i === 0;
+            const pct = mirrorSnake.length > 1 ? i / (mirrorSnake.length - 1) : 0;
+            ctx.fillStyle = `hsla(200, 80%, ${60 - pct * 15}%, 0.6)`;
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = isHead ? 10 : 4;
+            const pad = isHead ? 2 : 4;
+            const x = seg.x * CELL + pad, y = seg.y * CELL + pad;
+            const sz = CELL - pad * 2;
+            ctx.fillRect(x, y, sz, sz);
+            ctx.shadowBlur = 0;
+
+            if (isHead) {
+                ctx.fillStyle = '#fff';
+                const mdir = { x: -dir.x, y: -dir.y };
+                const eo = mdir.x === 0 ? 0 : mdir.x * 3;
+                const eoy = mdir.y === 0 ? 0 : mdir.y * 3;
+                ctx.beginPath();
+                ctx.arc(seg.x * CELL + 10 + eo, seg.y * CELL + 11 + eoy, 2, 0, Math.PI * 2);
+                ctx.arc(seg.x * CELL + 20 + eo, seg.y * CELL + 11 + eoy, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        });
+    }
+
+    // 💥 收缩波：倒计时脉动边框
+    if (currentEvent === 'shrink' && shrinkTimer > 0) {
+        const elapsed = performance.now() - shrinkTimer;
+        const progress = 1 - Math.min(1, elapsed / SHRINK_INTERVAL);
+        const pulseSpeed = 1 + (1 - progress) * 4; // 越接近收缩越快
+        const alpha = 0.15 + Math.sin(t * pulseSpeed) * 0.1 * (1 - progress);
+        const bdr = shrinkBorder * CELL;
+        ctx.strokeStyle = `rgba(239, 68, 68, ${alpha})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(bdr + 1, bdr + 1, LOGICAL_W - bdr * 2 - 2, LOGICAL_H - bdr * 2 - 2);
+    }
 
     if (fx.flashAlpha > 0) {
         ctx.fillStyle = `rgba(255,255,255,${fx.flashAlpha})`;
@@ -3161,6 +3424,31 @@ function draw() {
             grad.addColorStop(1, `rgba(233,69,96,${urgency})`);
             ctx.fillStyle = grad;
             ctx.fillRect(-10, -10, LOGICAL_W + 20, LOGICAL_H + 20);
+        }
+    }
+
+    // 💥 收缩波：安全区岩浆发光边框
+    if (currentEvent === 'shrink' && shrinkBorder > 0) {
+        const bdr = shrinkBorder * CELL;
+        const lavaGlow = Math.sin(t * 4) * 0.15 + 0.35;
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = `rgba(239, 68, 68, ${lavaGlow})`;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(bdr + 1.5, bdr + 1.5, LOGICAL_W - bdr * 2 - 3, LOGICAL_H - bdr * 2 - 3);
+        ctx.shadowBlur = 0;
+        // 裂纹效果
+        ctx.strokeStyle = `rgba(239, 68, 68, ${lavaGlow * 0.4})`;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+            const angle = t * 0.5 + i * Math.PI / 2;
+            const cx = LOGICAL_W / 2 + Math.cos(angle) * (LOGICAL_W / 2 - bdr);
+            const cy = LOGICAL_H / 2 + Math.sin(angle) * (LOGICAL_H / 2 - bdr);
+            ctx.beginPath();
+            ctx.moveTo(cx - 5, cy - 3);
+            ctx.lineTo(cx + 3, cy + 5);
+            ctx.lineTo(cx + 7, cy - 1);
+            ctx.stroke();
         }
     }
 
@@ -3223,7 +3511,8 @@ function draw() {
     }
 
     if (gamePaused && gameStarted) {
-        if (!document.getElementById('pauseOverlay').classList.contains('show')) {
+        // 事件横幅期间不显示暂停弹层
+        if (!document.getElementById('eventBanner').classList.contains('show') && !document.getElementById('pauseOverlay').classList.contains('show')) {
             showOverlay('pauseOverlay');
         }
     }
@@ -3257,8 +3546,9 @@ function tryMove(immediate) {
     if (gameOver || fx.celebrating || !gameStarted) return;
     const now = performance.now();
     const elapsed = now - lastMoveTime;
-    // 上次移动成功才限速；撞墙/撞身后允许立即转向
-    if (elapsed < (immediate ? MOVE_IMMEDIATE_GUARD : MOVE_INTERVAL) && lastMoveSucceeded) return;
+    // 上次移动成功才限速；撞墙/撞身后允许立即转向；加速波缩短间隔
+    const moveInterval = currentEvent === 'speed' ? 250 : MOVE_INTERVAL;
+    if (elapsed < (immediate ? MOVE_IMMEDIATE_GUARD : moveInterval) && lastMoveSucceeded) return;
     lastMoveTime = now;
 
     const head = snake[0];
@@ -3274,6 +3564,10 @@ function tryMove(immediate) {
         if (lastMoveSucceeded) triggerShake(6);
         lastMoveSucceeded = false; return;
     }
+    // 💥 收缩波：蛇头进入死亡区
+    if (currentEvent === 'shrink' && (nx < shrinkBorder || nx >= COLS - shrinkBorder || ny < shrinkBorder || ny >= ROWS - shrinkBorder)) {
+        safeVibrate(200); handleFail('shrink'); return;
+    }
 
     lastMoveSucceeded = true;
     snake.unshift({x: nx, y: ny});
@@ -3288,6 +3582,14 @@ function tryMove(immediate) {
         sound.collect();
         safeVibrate(50);
         triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 8, '#ffd700', { spread: 3 });
+    } else if (giftBlocks.has(key)) {
+        giftBlocks.delete(key);
+        endlessWaveBudget += 10;
+        sound.collect();
+        safeVibrate(50);
+        triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 12, '#ffd700', { spread: 4 });
+        const stepsEl2 = document.getElementById('ehSteps');
+        if (stepsEl2) stepsEl2.textContent = `${endlessWaveSteps}/${endlessWaveBudget}`;
     } else if (!recycled) {
         snake.pop();
     }
@@ -3307,6 +3609,34 @@ function tryMove(immediate) {
     }
     updateStats();
 
+    // 🪞 镜像波：镜像蛇跟随主蛇对称移动
+    if (currentEvent === 'mirror' && mirrorAlive) {
+        const mdir = { x: -dir.x, y: -dir.y };
+        const mHead = mirrorSnake[0];
+        const mnx = mHead.x + mdir.x, mny = mHead.y + mdir.y;
+
+        if (mnx < 0 || mnx >= COLS || mny < 0 || mny >= ROWS) {
+            mirrorAlive = false;
+            triggerParticles(mHead.x * CELL + CELL / 2, mHead.y * CELL + CELL / 2, 12, '#38bdf8', { spread: 4 });
+        } else if (mirrorSnake.slice(0, -1).some(s => s.x === mnx && s.y === mny)) {
+            mirrorAlive = false;
+            triggerParticles(mHead.x * CELL + CELL / 2, mHead.y * CELL + CELL / 2, 12, '#38bdf8', { spread: 4 });
+        } else {
+            mirrorSnake.unshift({ x: mnx, y: mny });
+            const mkey = `${mnx},${mny}`;
+            if (resourceBlocks.has(mkey)) {
+                resourceBlocks.delete(mkey);
+                sound.collect();
+                triggerParticles(mnx * CELL + CELL / 2, mny * CELL + CELL / 2, 8, '#38bdf8', { spread: 3 });
+            } else if (!spitBlocks.has(mkey)) {
+                mirrorSnake.pop();
+            }
+            if (TARGET.has(mkey)) {
+                triggerParticles(mnx * CELL + CELL / 2, mny * CELL + CELL / 2, 6, '#38bdf8', { spread: 2.5 });
+            }
+        }
+    }
+
     if (TARGET.has(key)) {
         triggerPulse(nx, ny);
         triggerParticles(nx * CELL + CELL/2, ny * CELL + CELL/2, 6, '#4ecca3', { spread: 2.5 });
@@ -3319,22 +3649,20 @@ function tryMove(immediate) {
     }
 }
 
+let lastSpitTime = 0;
 function spit() {
     if (gameOver || gamePaused || fx.celebrating) return;
     if (snake.length <= 1) return;
-    if (steps === lastSpitStep) return;
-    lastSpitStep = steps;
     if (!gameStarted) { gameStarted = true; document.getElementById('startOverlay').classList.add('hidden'); }
 
     const tail = snake[snake.length - 1];
     const tailKey = `${tail.x},${tail.y}`;
-    if (spitBlocks.has(tailKey)) return;
     const beforeCovered = getCoveredSet();
 
     if (TARGET.has(tailKey)) {
         // ====== 批量模式：蛇尾在目标格内，连续检测尾部 → 批量固化 ======
         const toSpit = [];
-        for (let i = snake.length - 1; i > 1; i--) {
+        for (let i = snake.length - 1; i >= 1; i--) {
             const seg = snake[i];
             if (TARGET.has(`${seg.x},${seg.y}`)) {
                 toSpit.push({ x: seg.x, y: seg.y, key: `${seg.x},${seg.y}` });
@@ -3393,6 +3721,32 @@ function spit() {
         updateStats();
     }
 
+    // 🪞 镜像波：镜像蛇同步吐块
+    if (currentEvent === 'mirror' && mirrorAlive && mirrorSnake.length > 1) {
+        const mTail = mirrorSnake[mirrorSnake.length - 1];
+        const mTailKey = `${mTail.x},${mTail.y}`;
+        if (TARGET.has(mTailKey)) {
+            // 镜像蛇批量吐块
+            const mToSpit = [];
+            for (let i = mirrorSnake.length - 1; i >= 1; i--) {
+                const seg = mirrorSnake[i];
+                if (TARGET.has(`${seg.x},${seg.y}`)) {
+                    mToSpit.push(seg);
+                } else break;
+            }
+            if (mToSpit.length > 0) {
+                mToSpit.forEach(s => spitBlocks.set(`${s.x},${s.y}`, { spitProgress: 0 }));
+                mirrorSnake.splice(-mToSpit.length, mToSpit.length);
+                triggerParticles(mTail.x * CELL + CELL / 2, mTail.y * CELL + CELL / 2, mToSpit.length * 4, '#38bdf8', { spread: 3 });
+            }
+        } else {
+            // 镜像蛇单格吐块
+            spitBlocks.set(mTailKey, { spitProgress: 0 });
+            mirrorSnake.pop();
+            triggerParticles(mTail.x * CELL + CELL / 2, mTail.y * CELL + CELL / 2, 3, '#38bdf8', { spread: 2 });
+        }
+    }
+
     const newKeys = [];
     for (const tk of TARGET) {
         if (beforeCovered.has(tk)) continue;
@@ -3417,7 +3771,7 @@ function spit() {
 
 function checkWin() {
     for (const key of TARGET)
-        if (!snake.some(s => `${s.x},${s.y}` === key) && !spitBlocks.has(key)) return;
+        if (!snake.some(s => `${s.x},${s.y}` === key) && !spitBlocks.has(key) && !mirrorSnake.some(s => `${s.x},${s.y}` === key)) return;
 
     if (gameEndlessMode) {
         // 无尽模式：进入下一波
@@ -3461,6 +3815,47 @@ function gameLoop(time) {
 
     if (!gameOver && !gamePaused && !fx.celebrating) tryMove(false);
 
+    // 💥 收缩波倒计时（时间驱动，兼容高刷屏）
+    if (!gameOver && !gamePaused && !fx.celebrating && currentEvent === 'shrink' && shrinkTimer > 0) {
+        const now = performance.now();
+        if (now - shrinkTimer >= SHRINK_INTERVAL) {
+            shrinkBorder++;
+            // 检查蛇头是否在新死亡区
+            const h = snake[0];
+            if (h && (h.x < shrinkBorder || h.x >= COLS - shrinkBorder || h.y < shrinkBorder || h.y >= ROWS - shrinkBorder)) {
+                handleFail('shrink');
+            } else {
+                // 截断在死亡区内的蛇尾
+                while (snake.length > 1) {
+                    const tail = snake[snake.length - 1];
+                    if (tail.x < shrinkBorder || tail.x >= COLS - shrinkBorder || tail.y < shrinkBorder || tail.y >= ROWS - shrinkBorder) {
+                        snake.pop();
+                    } else break;
+                }
+                // 移除死亡区内的目标格
+                const toRemove = [];
+                TARGET.forEach(key => {
+                    const [cx, cy] = key.split(',').map(Number);
+                    if (cx < shrinkBorder || cx >= COLS - shrinkBorder || cy < shrinkBorder || cy >= ROWS - shrinkBorder) {
+                        toRemove.push(key);
+                    }
+                });
+                toRemove.forEach(k => TARGET.delete(k));
+            }
+            // 收缩视觉效果
+            triggerParticles(LOGICAL_W / 2, LOGICAL_H / 2, 20, '#ef4444', { spread: 8 });
+            triggerShake(8);
+            sound.bump();
+            safeVibrate(100);
+            // 重置倒计时（如果安全区还够大）
+            if (shrinkBorder < COLS / 2 - 1) {
+                shrinkTimer = now;
+            } else {
+                shrinkTimer = 0;
+            }
+        }
+    }
+
     // 濒死心跳音效
     if (!gameOver && !fx.celebrating && audioReady && !gameEndlessMode) {
         const lv = LEVELS[currentLevel];
@@ -3502,14 +3897,14 @@ function debugWin() {
     triggerCelebration();
 }
 document.addEventListener('keydown', e => {
-    switch(e.key) {
-        case 'ArrowUp': case 'w': case 'W': e.preventDefault(); setDirection(0, -1); break;
-        case 'ArrowDown': case 's': case 'S': e.preventDefault(); setDirection(0, 1); break;
-        case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); setDirection(-1, 0); break;
-        case 'ArrowRight': case 'd': case 'D': e.preventDefault(); setDirection(1, 0); break;
-        case ' ': case 'Enter': e.preventDefault(); spit(); break;
-        case '`': case '~': e.preventDefault(); debugWin(); break; // 测试通关
-    }
+    const k = e.key;
+    const code = e.keyCode || e.which;
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') { e.preventDefault(); setDirection(0, -1); }
+    else if (k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); setDirection(0, 1); }
+    else if (k === 'ArrowLeft' || k === 'a' || k === 'A') { e.preventDefault(); setDirection(-1, 0); }
+    else if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); setDirection(1, 0); }
+    else if (k === ' ' || k === 'Spacebar' || k === 'Enter' || code === 32 || code === 13) { e.preventDefault(); spit(); }
+    else if (k === '`' || k === '~') { e.preventDefault(); debugWin(); }
 });
 
 // Shell buttons
@@ -3517,7 +3912,8 @@ document.getElementById('btnUp').addEventListener('click', () => setDirection(0,
 document.getElementById('btnDown').addEventListener('click', () => setDirection(0, 1));
 document.getElementById('btnLeft').addEventListener('click', () => setDirection(-1, 0));
 document.getElementById('btnRight').addEventListener('click', () => setDirection(1, 0));
-document.getElementById('btnA').addEventListener('click', spit);
+document.getElementById('btnA').addEventListener('touchstart', e => { e.preventDefault(); spit(); }, {passive: false});
+document.getElementById('btnA').addEventListener('mousedown', e => { e.preventDefault(); spit(); });
 document.getElementById('btnB').addEventListener('click', () => {
     if (!gameOver && gameStarted) {
         gamePaused = !gamePaused;
@@ -3635,12 +4031,12 @@ document.querySelector('.pocket-shell').addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - touchStartX;
     const dy = e.changedTouches[0].clientY - touchStartY;
     const dist = Math.hypot(dx, dy);
-    if (dist < 10) {
+    if (dist < 20) {
         // 点按 → 双击吐块检测
         const now = Date.now();
-        if (now - lastTapTime < 350) { spit(); lastTapTime = 0; }
+        if (now - lastTapTime < 500) { spit(); lastTapTime = 0; }
         else lastTapTime = now;
-    } else if (dist >= 10) {
+    } else if (dist >= 20) {
         // 滑动转向：阈值降低到 10px，消除死区
         if (Math.abs(dx) > Math.abs(dy)) setDirection(dx > 0 ? 1 : -1, 0);
         else setDirection(0, dy > 0 ? 1 : -1);
